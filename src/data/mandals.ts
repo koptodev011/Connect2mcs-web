@@ -3,6 +3,7 @@ import type { Tone } from '@/lib/tokens';
 export type Region = 'Near me' | 'India' | 'North America' | 'Europe' | 'Middle East' | 'Asia-Pacific' | 'Africa';
 
 export interface Mandal {
+  id?: string;
   image?: string;
   about?: string;
   address?: string;
@@ -25,6 +26,7 @@ export interface Mandal {
   /** Whether this mandal appears in the home page featured row. */
   home?: boolean;
   email?: string;
+  phone?: string;
 }
 
 export const mandals: Mandal[] = [

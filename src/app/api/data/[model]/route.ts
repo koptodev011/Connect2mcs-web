@@ -17,7 +17,7 @@ const splitDot = (s: any): string[] =>
 // System/service accounts that must never surface as real community members.
 const SYSTEM_NAMES = new Set(['System', 'SuperUser', 'Web Service', 'System (deprecated)']);
 const isRealUser = (u: any) =>
-  u?.Name && !SYSTEM_NAMES.has(u.Name) && u.VH_IsGuestUser !== true;
+  u?.Name && u.IsActive !== false && !SYSTEM_NAMES.has(u.Name) && u.VH_IsGuestUser !== true;
 
 const getEstYear = (record: any): number => {
   if (record.MCS_Establishment_Year) return Number(record.MCS_Establishment_Year);
@@ -54,15 +54,44 @@ export async function GET(
   const recordId = searchParams.get('id');
   const pageSize = Math.min(Math.max(Number(searchParams.get('top')) || 10, 1), 50);
   const skipRecords = Math.max(Number(searchParams.get('skip')) || 0, 0);
+  const cookieHeader = request.headers.get('cookie') || '';
+  const countryCookie = cookieHeader
+    .split(';')
+    .map(cookie => cookie.trim())
+    .find(cookie => cookie.startsWith('mcs_country='));
+  const selectedCountry = countryCookie
+    ? decodeURIComponent(countryCookie.substring('mcs_country='.length))
+    : 'All';
+  const sourcePageSize = selectedCountry === 'All' ? pageSize : 100;
+  const sourceSkipRecords = selectedCountry === 'All' ? skipRecords : 0;
 
   try {
     let data = [];
 
     switch (model) {
+      case 'countries': {
+        const countryPages = await Promise.all([
+          fetchModel('C_Country', undefined, { top: 100, skip: 0 }),
+          fetchModel('C_Country', undefined, { top: 100, skip: 100 }),
+          fetchModel('C_Country', undefined, { top: 100, skip: 200 }),
+        ]);
+        data = countryPages
+          .flat()
+          .filter((record: any) => record.IsActive !== false)
+          .map((record: any) => ({
+            id: record.id.toString(),
+            name: record.Name || '',
+            code: record.CountryCode || '',
+            alpha3: record.ISOCountryCodeAlpha3 || '',
+          }))
+          .filter((country: { name: string }) => country.name);
+        break;
+      }
+
       case 'jobs':
         const rawJobs = await fetchModel('MCS_Jobs', undefined, {
-          top: pageSize,
-          skip: skipRecords,
+          top: sourcePageSize,
+          skip: sourceSkipRecords,
           orderby: 'Updated desc',
         });
         data = rawJobs.map((record: any) => {
@@ -111,6 +140,13 @@ export async function GET(
             recordId,
             'ad_user,mcs_socia_media,mcs_mandal_gallery,mcs_event'
           );
+          const allMandalUsers = await fetchModel('AD_User', undefined, { top: 100 });
+          const mandalUsers = allMandalUsers.filter((user: any) => {
+            const mandalId = typeof user.MCS_Mandals_ID === 'object'
+              ? user.MCS_Mandals_ID?.id
+              : user.MCS_Mandals_ID;
+            return String(mandalId) === String(record.id) && isRealUser(user);
+          });
 
           const loc = record.C_Location_ID || {};
           let city = loc.City;
@@ -147,7 +183,7 @@ export async function GET(
             city,
             country: loc.C_Country_ID?.identifier || 'Unknown Country',
             est: getEstYear(record),
-            members: committee.length,
+            members: mandalUsers.length,
             events: getEventsCount(record),
             rating: record.Rating ? parseFloat(record.Rating) : 0,
             dist: '',
@@ -224,7 +260,10 @@ export async function GET(
           });
         }
 
-        const rawMandals = await fetchModel('MCS_Mandals');
+        const [rawMandals, allMandalUsers] = await Promise.all([
+          fetchModel('MCS_Mandals'),
+          fetchModel('AD_User', undefined, { top: 100 }),
+        ]);
         data = rawMandals.map((record: any) => {
           const loc = record.C_Location_ID || {};
           let city = loc.City;
@@ -250,7 +289,12 @@ export async function GET(
             city,
             country: loc.C_Country_ID?.identifier || 'Unknown Country',
             est: getEstYear(record),
-            members: Array.isArray(record.ad_user) ? record.ad_user.filter(isRealUser).length : getMembersCount(record),
+            members: allMandalUsers.filter((user: any) => {
+              const mandalId = typeof user.MCS_Mandals_ID === 'object'
+                ? user.MCS_Mandals_ID?.id
+                : user.MCS_Mandals_ID;
+              return String(mandalId) === String(record.id) && isRealUser(user);
+            }).length,
             events: getEventsCount(record),
             rating: record.Rating ? parseFloat(record.Rating) : 0,
             dist: '', // computed locally typically
@@ -616,6 +660,7 @@ export async function GET(
             marathi: user.MCS_MarathiName || user.Name,
             role: user.MCS_Role || 'Member',
             city: user.C_Location_ID?.identifier || 'Unknown City',
+            country: user.C_Country_ID?.identifier || 'Unknown Country',
             origin: user.MCS_OriginalyFrom_ID?.identifier || 'Maharashtra',
             type: user.MCS_LoginType || 'Standard',
             mandal: user.MCS_Mandals_ID?.identifier || 'Unknown Mandal',
@@ -624,7 +669,7 @@ export async function GET(
             langs: user.MCS_Languages ? user.MCS_Languages.split(',') : ['Marathi', 'English'],
             open: user.MCS_Open ? user.MCS_Open.split(',') : ['Networking'],
             email: user.EMail || '',
-            phone: user.Phone || ''
+            phone: user.Phone || user.Phone2 || ''
           }];
         }
         break;
@@ -799,8 +844,8 @@ export async function GET(
           data = mapEmbassy(embassy);
         } else {
           const rawEmbassies = await fetchModel('MCS_Embassy', undefined, {
-            top: pageSize,
-            skip: skipRecords,
+            top: sourcePageSize,
+            skip: sourceSkipRecords,
             orderby: 'Updated desc',
           });
           data = rawEmbassies.map(mapEmbassy);
@@ -883,6 +928,33 @@ export async function GET(
           break;
         }
         return NextResponse.json({ error: 'Model mapping not implemented' }, { status: 404 });
+    }
+
+    const countryFilteredModels = !['countries', 'profile'].includes(model);
+    if (countryFilteredModels && Array.isArray(data) && selectedCountry !== 'All') {
+      const normalizeCountry = (value: string) => {
+        const normalized = value.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const aliases: Record<string, string> = {
+          usa: 'unitedstates',
+          us: 'unitedstates',
+          uk: 'unitedkingdom',
+          uae: 'unitedarabemirates',
+        };
+        return aliases[normalized] || normalized;
+      };
+      const wantedCountry = normalizeCountry(selectedCountry);
+      data = data.filter((item: any) => {
+        const candidates = [
+          item.country,
+          item.city,
+          item.location,
+          item.loc,
+          item.where,
+          item.address,
+        ].filter((value): value is string => typeof value === 'string' && value.length > 0);
+        return candidates.some(value => normalizeCountry(value).includes(wantedCountry));
+      });
+      data = data.slice(skipRecords, skipRecords + pageSize);
     }
 
     return NextResponse.json(data);

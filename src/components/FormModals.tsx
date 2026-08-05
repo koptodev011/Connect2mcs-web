@@ -222,19 +222,31 @@ export function ListBusinessModal({ isOpen, onClose }: { isOpen: boolean; onClos
 }
 
 // ── Book / Request Modal (generic) ────────────────────────────────────────────
-export function BookModal({ isOpen, onClose, title, marathi, fields, submitLabel = 'Submit request' }: {
+export function BookModal({ isOpen, onClose, title, marathi, fields, submitLabel = 'Submit request', initialValues, onSubmit }: {
   isOpen: boolean; onClose: () => void; title: string; marathi?: string;
   fields: { key: string; label: string; placeholder?: string; type?: string; multiline?: boolean; options?: { value: string; label: string }[] }[];
   submitLabel?: string;
+  initialValues?: Record<string, string>;
+  onSubmit?: (form: Record<string, string>) => Promise<void> | void;
 }) {
   const toast = useGlobalToast();
-  const [form, setForm] = useState<Record<string, string>>({});
+  const [form, setForm] = useState<Record<string, string>>(initialValues || {});
+  const [submitting, setSubmitting] = useState(false);
   const set = (k: string) => (v: string) => setForm(f => ({ ...f, [k]: v }));
 
-  function submit() {
-    toast.add(`${submitLabel} sent successfully!`, 'success');
-    setForm({});
-    onClose();
+  async function submit() {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await onSubmit?.(form);
+      toast.add(`${submitLabel} sent successfully!`, 'success');
+      setForm({});
+      onClose();
+    } catch (error) {
+      toast.add(error instanceof Error ? error.message : 'Could not send request', 'error');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -243,7 +255,7 @@ export function BookModal({ isOpen, onClose, title, marathi, fields, submitLabel
         <Field key={f.key} label={f.label} value={form[f.key] || ''} onChange={set(f.key)} placeholder={f.placeholder} type={f.type} multiline={f.multiline} options={f.options}/>
       ))}
       <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-        <Btn kind="primary" size="md" full onClick={submit}>{submitLabel}</Btn>
+        <Btn kind="primary" size="md" full onClick={submit}>{submitting ? 'Sending...' : submitLabel}</Btn>
         <Btn kind="ghost" size="md" onClick={onClose}>Cancel</Btn>
       </div>
     </Modal>

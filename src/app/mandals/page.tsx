@@ -72,7 +72,7 @@ export default function MandalsPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-      <PageHeader
+      {/* <PageHeader
         title="Maharashtra Mandals"
         marathi="महाराष्ट्र मंडळे"
         subtitle={`${loading ? '...' : mandalsData.length} organisations · ${loading ? '...' : countryCount} countries · ${loading ? '...' : mandalsData.reduce((acc, m) => acc + (m.members || 0), 0).toLocaleString()} active members`}
@@ -80,7 +80,7 @@ export default function MandalsPage() {
           <Btn kind="ghost" size="md" iconL="filter" onClick={() => setFilterOpen(true)}>Filters</Btn>
           <Btn kind="dark" size="md" iconL="plus" onClick={() => setAddModalOpen(true)}>Add Mandal</Btn>
         </>}
-      />
+      /> */}
 
       <Card pad={14} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', background: C.bgDeep, borderRadius: 10 }}>
@@ -94,12 +94,12 @@ export default function MandalsPage() {
         </div>
       </Card>
 
-      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
+      {/* <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
         {filters.map(f => <Pill key={f} active={active === f} onClick={() => { setActive(f); setVisibleCount(PAGE_SIZE); }}>{f}</Pill>)}
-      </div>
+      </div> */}
 
       {/* Map + featured */}
-      <div className="mob-stack" style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 16 }}>
+      {/* <div className="mob-stack" style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 16 }}>
         <Card pad={0} style={{ overflow: 'hidden' }}>
           <div style={{ padding: '14px 18px', borderBottom: `1px solid ${C.line}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
@@ -191,15 +191,15 @@ export default function MandalsPage() {
             </>
           )}
         </Card>
-      </div>
+      </div> */}
 
       {/* Directory grid */}
       <section>
-        <SectionHead
+        {/* <SectionHead
           title="All Mandals"
           subtitle={`Showing ${visibleMandals.length} of ${filtered.length} · ${active}`}
           action="Sort: Distance"
-        />
+        /> */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
           {loading ? (
             <div style={{ padding: '40px 24px', textAlign: 'center', gridColumn: '1/-1', color: C.ink3, fontSize: 13 }}>
@@ -258,8 +258,8 @@ export default function MandalsPage() {
           </div>
       </section>
 
-      <AddMandalModal isOpen={addModalOpen} onClose={() => setAddModalOpen(false)}/>
-      <FilterModal isOpen={filterOpen} onClose={() => setFilterOpen(false)} />
+      {/* <AddMandalModal isOpen={addModalOpen} onClose={() => setAddModalOpen(false)}/>
+      <FilterModal isOpen={filterOpen} onClose={() => setFilterOpen(false)} /> */}
     </div>
   );
 }

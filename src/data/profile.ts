@@ -5,6 +5,7 @@ export interface CurrentUser {
   marathi: string;
   role: string;
   city: string;
+  country: string;
   origin: string;
   type: string;
   mandal: string;
@@ -40,6 +41,7 @@ export const me: CurrentUser = {
   marathi: 'अनुजा करंदीकर',
   role:    'Senior Product Designer',
   city:    'Boston, MA',
+  country: 'United States',
   origin:  'Pune, IN',
   type:    'NRI',
   mandal:  'Boston Marathi Mandal',
