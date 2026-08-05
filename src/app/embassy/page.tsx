@@ -1,13 +1,85 @@
 'use client';
 
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { C, F } from '@/lib/tokens';
 import { Card, SectionHead, Btn, Avatar, useGlobalToast } from '@/components/primitives';
 import Icon from '@/components/Icon';
 import { emergencyContacts, missions, advisories } from '@/data/embassy';
 
+const PAGE_SIZE = 10;
+
 export default function EmbassyPage() {
   const toast = useGlobalToast();
+  const [missionsData, setMissionsData] = useState(missions);
+  const [emergencyContactsData, setEmergencyContactsData] = useState(emergencyContacts);
+  const [loadingMore, setLoadingMore] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const loadingRef = useRef(false);
+
+  const loadEmbassies = useCallback(async (skip: number) => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+    await Promise.resolve();
+    setLoadingMore(true);
+    try {
+      const response = await fetch(`/api/data/embassy?top=${PAGE_SIZE}&skip=${skip}`);
+      if (!response.ok) throw new Error('Failed to load embassy data');
+      const data = await response.json();
+      if (!Array.isArray(data)) return;
+
+      setMissionsData(current => [
+        ...current,
+        ...data.filter(item => !current.some(existing => existing.id === item.id)),
+      ]);
+      setHasMore(data.length === PAGE_SIZE);
+    } catch (error) {
+      console.error('Embassy API error:', error);
+    } finally {
+      loadingRef.current = false;
+      setLoadingMore(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/data/emergency-contacts')
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to load emergency contacts');
+        return response.json();
+      })
+      .then(data => {
+        if (Array.isArray(data)) setEmergencyContactsData(data);
+      })
+      .catch(error => console.error('Emergency contacts API error:', error));
+  }, []);
+  useEffect(() => {
+    fetch(`/api/data/embassy?top=${PAGE_SIZE}&skip=0`)
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to load embassy data');
+        return response.json();
+      })
+      .then(data => {
+        if (Array.isArray(data)) {
+          setMissionsData(data);
+          setHasMore(data.length === PAGE_SIZE);
+        }
+      })
+      .catch(error => console.error('Embassy API error:', error))
+      .finally(() => setLoadingMore(false));
+  }, []);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target || loadingMore || !hasMore) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) void loadEmbassies(missionsData.length);
+    }, { rootMargin: '300px' });
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasMore, loadEmbassies, loadingMore, missionsData.length]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
@@ -66,7 +138,7 @@ export default function EmbassyPage() {
           <section>
             <SectionHead title="Indian Missions Near You" subtitle="Embassies & consulates by distance" action="Map >" onAction={() => window.open('https://maps.google.com/?q=Indian+Embassies', '_blank')} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {missions.map(mission => (
+              {missionsData.map(mission => (
                 <Card key={mission.id} pad={20} style={{ border: `1px solid ${C.line}` }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
@@ -80,16 +152,14 @@ export default function EmbassyPage() {
                       <h3 style={{ fontSize: 18, fontWeight: 600, color: C.ink, fontFamily: F.display, margin: '0 0 4px' }}>{mission.name}</h3>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 13, color: C.ink3 }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="pin" size={14} color={C.ink3} /> {mission.location}</span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="clock" size={14} color={C.ink3} /> {mission.hours}</span>
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: 16, fontWeight: 700, color: '#1A3673' }}>{mission.distance}</div>
-                      <div style={{ fontSize: 11, color: C.ink3, fontWeight: 500 }}>away</div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 12, marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.line}` }}>
-                    <Btn kind="outline" size="sm" iconL="phone" style={{ flex: 1, color: C.green, borderColor: C.green }} onClick={() => window.open('tel:+1234567890', '_self')}>Call</Btn>
+                    <Btn kind="outline" size="sm" iconL="phone" style={{ flex: 1, color: C.green, borderColor: C.green }} onClick={() => window.open(`tel:${mission.telephone}`, '_self')}>Call</Btn>
                     <Btn kind="outline" size="sm" iconL="map" style={{ flex: 1, color: '#1A3673', borderColor: '#1A3673' }} onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(mission.location + ' Indian Embassy')}`, '_blank')}>Directions</Btn>
                     <Link href={`/embassy/${mission.id}`} style={{ flex: 1, textDecoration: 'none' }}>
                       <Btn kind="soft" size="sm" full style={{ color: C.brick }}>Details &gt;</Btn>
@@ -97,6 +167,8 @@ export default function EmbassyPage() {
                   </div>
                 </Card>
               ))}
+              {hasMore && <div ref={loadMoreRef} aria-hidden="true" style={{ height: 1 }} />}
+              {loadingMore && <div style={{ textAlign: 'center', padding: 12, color: C.ink3, fontSize: 12 }}>Loading missions...</div>}
             </div>
           </section>
 
@@ -142,7 +214,7 @@ export default function EmbassyPage() {
             </div>
           </Card>
 
-          {emergencyContacts.map(contact => (
+          {emergencyContactsData.map(contact => (
             <Card key={contact.id} pad={16} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${contact.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

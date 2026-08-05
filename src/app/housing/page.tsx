@@ -162,20 +162,7 @@ export default function HousingPage() {
                       <ImgPh kind="housing" tone={l.tone} height={150} badge={l.stay}/>
                     )}
                   </Link>
-                  <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave(l.id); }}
-                    aria-label={isSaved ? 'Unsave listing' : 'Save listing'}
-                    style={{
-                      position: 'absolute', top: 10, right: 10, zIndex: 2,
-                      width: 32, height: 32, borderRadius: '50%',
-                      background: isSaved ? C.brick : 'rgba(255,255,255,0.92)',
-                      border: 'none', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: '0 2px 6px rgba(15,14,12,0.15)',
-                    }}
-                  >
-                    <Icon name="heart" size={15} color={isSaved ? '#fff' : C.ink2}/>
-                  </button>
+               
                   <div style={{ padding: '14px 16px 16px' }}>
                     <h4 style={{ margin: 0, fontFamily: F.display, fontSize: 16, fontWeight: 600, color: C.ink, letterSpacing: '-0.02em', lineHeight: 1.25 }}>{l.title}</h4>
                     <div style={{ marginTop: 4, fontSize: 12.5, color: C.ink3, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -234,7 +221,6 @@ export default function HousingPage() {
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
                   <Btn kind="primary" size="sm" full onClick={() => { setContactTarget({ name: r.name, role: 'Seeker' }); setContactOpen(true); }}>Reach out</Btn>
-                  <Btn kind="outline" size="sm" onClick={() => toggleReqSave(i)} style={isReqSaved ? { color: C.brick, borderColor: C.brick, background: '#FFF1F0' } : {}}><Icon name="heart" size={14} color={isReqSaved ? C.brick : C.ink}/></Btn>
                 </div>
               </Card>
               );

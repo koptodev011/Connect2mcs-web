@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { C, F } from '@/lib/tokens';
@@ -10,13 +10,28 @@ import { helpers } from '@/data/maids';
 
 export default function MaidDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
-  const helper = helpers.find(h => h.id === resolvedParams.id);
+  const fallbackHelper = helpers.find(h => h.id === resolvedParams.id) || null;
+  const [helper, setHelper] = useState(fallbackHelper);
+  const [loading, setLoading] = useState(!fallbackHelper);
   const toast = useGlobalToast();
   const [isSaved, setIsSaved] = useState(false);
-  
-  if (!helper) {
-    notFound();
+
+  useEffect(() => {
+    fetch(`/api/data/maids?id=${encodeURIComponent(resolvedParams.id)}`)
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to load maid details');
+        return response.json();
+      })
+      .then(data => setHelper(data))
+      .catch(error => console.error('Maid details API error:', error))
+      .finally(() => setLoading(false));
+  }, [resolvedParams.id]);
+
+  if (loading) {
+    return <div style={{ padding: 40, textAlign: 'center', color: C.ink3 }}>Loading maid profile...</div>;
   }
+
+  if (!helper) notFound();
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 40, alignItems: 'start' }}>

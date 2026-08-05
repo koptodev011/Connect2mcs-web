@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { C, F } from '@/lib/tokens';
 import Icon from '@/components/Icon';
 import Link from 'next/link';
@@ -10,6 +10,7 @@ import { AddMandalModal, FilterModal } from '@/components/FormModals';
 import MandalMap from '@/components/MandalMap';
 
 const filters = ['All', 'Near me', 'India', 'North America', 'Europe', 'Middle East', 'Asia-Pacific', 'Africa'];
+const PAGE_SIZE = 12;
 
 export default function MandalsPage() {
   const [mandalsData, setMandalsData] = useState<Mandal[]>([]);
@@ -34,6 +35,8 @@ export default function MandalsPage() {
   const [mapZoom, setMapZoom] = useState(1);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const toggleSave = (code: string) => setSaved(s => {
     const n = new Set(s);
@@ -46,6 +49,23 @@ export default function MandalsPage() {
     const matchQ = !searchQuery || m.name.toLowerCase().includes(searchQuery.toLowerCase()) || m.city.toLowerCase().includes(searchQuery.toLowerCase());
     return matchCat && matchQ;
   });
+
+  const visibleMandals = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target || !hasMore) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisibleCount(count => Math.min(count + PAGE_SIZE, filtered.length));
+      }
+    }, { rootMargin: '300px' });
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasMore, filtered.length]);
 
   const featuredMandal = mandalsData.find(m => m.code === 'TX') || mandalsData[0] || null;
   const countryCount = new Set(mandalsData.map(m => m.country).filter(Boolean)).size;
@@ -67,7 +87,7 @@ export default function MandalsPage() {
           <Icon name="search" size={16} color={C.ink3}/>
           <input 
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => { setSearchQuery(e.target.value); setVisibleCount(PAGE_SIZE); }}
             placeholder="Search mandals by name or city…" 
             style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: 13.5, fontWeight: 500, fontFamily: 'inherit' }}
           />
@@ -75,7 +95,7 @@ export default function MandalsPage() {
       </Card>
 
       <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
-        {filters.map(f => <Pill key={f} active={active === f} onClick={() => setActive(f)}>{f}</Pill>)}
+        {filters.map(f => <Pill key={f} active={active === f} onClick={() => { setActive(f); setVisibleCount(PAGE_SIZE); }}>{f}</Pill>)}
       </div>
 
       {/* Map + featured */}
@@ -161,13 +181,7 @@ export default function MandalsPage() {
                   <Link href={`/mandals/${featuredMandal.code}`} style={{ flex: 1, textDecoration: 'none' }}>
                     <Btn kind="primary" size="md" full>Visit page</Btn>
                   </Link>
-                  <Btn
-                    kind={saved.has(featuredMandal.code) ? 'soft' : 'outline'}
-                    size="md"
-                    onClick={() => toggleSave(featuredMandal.code)}
-                  >
-                    <Icon name="heart" size={16} color={saved.has(featuredMandal.code) ? C.brick : C.ink}/>
-                  </Btn>
+                  
                   <Btn kind="outline" size="md" onClick={() => {
                     navigator.clipboard.writeText(window.location.origin + '/mandals/' + featuredMandal.code);
                     toast.add('Link copied to clipboard!', 'success');
@@ -183,7 +197,7 @@ export default function MandalsPage() {
       <section>
         <SectionHead
           title="All Mandals"
-          subtitle={`Showing ${filtered.length} of 184 · ${active}`}
+          subtitle={`Showing ${visibleMandals.length} of ${filtered.length} · ${active}`}
           action="Sort: Distance"
         />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
@@ -196,27 +210,12 @@ export default function MandalsPage() {
               <div style={{ fontFamily: F.display, fontSize: 16, fontWeight: 600, color: C.ink }}>No mandals found</div>
               <p style={{ margin: '6px 0 0', fontSize: 13, color: C.ink3 }}>Try adjusting your search or filters.</p>
             </div>
-          ) : filtered.map((m, index) => {
+          ) : visibleMandals.map((m, index) => {
               const isSaved = saved.has(m.code);
               return (
             <Link key={`${m.code}-${index}`} href={`/mandals/${m.code}`} style={{ textDecoration: 'none', display: 'flex' }}>
             <Card pad={0} interactive style={{ overflow: 'hidden', position: 'relative', flex: 1 }}>
-              <ImgPh kind="mandal" label={m.code} showLabel height={130} tone={m.tone} badge={m.hosting ? 'Hosting' : null} src={m.image}/>
-                  <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave(m.code); }}
-                    aria-label={isSaved ? 'Unsave Mandal' : 'Save Mandal'}
-                    style={{
-                      position: 'absolute', top: 10, right: 10, zIndex: 2,
-                      width: 32, height: 32, borderRadius: '50%',
-                      background: isSaved ? C.brick : 'rgba(255,255,255,0.92)',
-                      border: 'none', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: '0 2px 6px rgba(15,14,12,0.15)',
-                      transition: 'background 0.15s ease',
-                    }}
-                  >
-                    <Icon name="heart" size={15} color={isSaved ? '#fff' : C.ink2}/>
-                  </button>
+              <ImgPh kind="mandal" label={m.code} showLabel height={130} tone={m.tone} badge={m.hosting ? 'Hosting' : null} src={m.image}/>                  
                   <div style={{ padding: '14px 16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                       <div style={{ minWidth: 0 }}>
@@ -253,6 +252,9 @@ export default function MandalsPage() {
             </Link>
               );
             })}
+            {hasMore && (
+              <div ref={loadMoreRef} aria-hidden="true" style={{ height: 1, gridColumn: '1/-1' }} />
+            )}
           </div>
       </section>
 

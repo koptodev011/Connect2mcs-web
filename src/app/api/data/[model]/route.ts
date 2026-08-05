@@ -52,13 +52,19 @@ export async function GET(
   const { model } = await params;
   const { searchParams } = new URL(request.url);
   const recordId = searchParams.get('id');
+  const pageSize = Math.min(Math.max(Number(searchParams.get('top')) || 10, 1), 50);
+  const skipRecords = Math.max(Number(searchParams.get('skip')) || 0, 0);
 
   try {
     let data = [];
 
     switch (model) {
       case 'jobs':
-        const rawJobs = await fetchModel('MCS_Jobs');
+        const rawJobs = await fetchModel('MCS_Jobs', undefined, {
+          top: pageSize,
+          skip: skipRecords,
+          orderby: 'Updated desc',
+        });
         data = rawJobs.map((record: any) => {
           const name = record.Name || '';
           let role, co;
@@ -79,7 +85,8 @@ export async function GET(
             co: co || 'Confidential',
             loc: record.Location || 'Remote',
             pay: record.GS_SalaryRange || 'Not disclosed',
-            type: record.MCS_JobType || 'Full-time',
+            type: record.MCS_JobType?.identifier
+              || (typeof record.MCS_JobType === 'string' ? record.MCS_JobType : 'Full-time'),
             exp: record.VH_Experience ? `${record.VH_Experience}y` : 'Any experience',
             posted: record.Created ? new Date(record.Created).toLocaleDateString() : 'Recently',
             tag: record.MCS_Tag || '',
@@ -355,6 +362,83 @@ export async function GET(
         });
         break;
 
+      case 'maids': {
+        const rawBookings = await fetchModel('MCS_Maid_Booking', undefined, {
+          top: 100,
+          orderby: 'Updated desc',
+        });
+
+        const getBookingScore = (status: string): number => {
+          if (/completed/i.test(status)) return 5;
+          if (/approved|confirmed/i.test(status)) return 4;
+          if (/pending/i.test(status)) return 3;
+          if (/rejected|cancelled/i.test(status)) return 1;
+          return 3;
+        };
+
+        const mapMaid = (record: any) => {
+          const category = record.MCS_Maid_Category?.identifier || 'Maid Service';
+          const currency = record.C_Currency_ID?.identifier || '';
+          const languageText = record.MCS_Languages?.identifier || record.MCS_Languages?.id || '';
+          const languages = String(languageText)
+            .replace(/[<>]/g, '')
+            .split(',')
+            .map((language: string) => language.trim())
+            .filter(Boolean);
+          const rateSuffix = /hour/i.test(category) ? '/hr' : '';
+          const maidBookings = rawBookings.filter((booking: any) => {
+            const maidId = typeof booking.MCS_Maid_ID === 'object'
+              ? booking.MCS_Maid_ID?.id
+              : booking.MCS_Maid_ID;
+            return String(maidId) === String(record.id) && booking.IsActive !== false;
+          });
+          const bookingScores = maidBookings.map((booking: any) =>
+            getBookingScore(booking.MCS_Status?.identifier || 'Pending')
+          );
+          const rating = bookingScores.length > 0
+            ? bookingScores.reduce((sum: number, score: number) => sum + score, 0) / bookingScores.length
+            : 0;
+
+          return {
+            id: record.id.toString(),
+            name: record.Name || record.AD_User_ID?.identifier || 'Community Helper',
+            avatar: (record.Name || 'M').charAt(0).toUpperCase(),
+            verified: Boolean(record.C_BPartner_ID) && record.IsActive !== false,
+            services: `${category} Maid Service`,
+            rating: Number(rating.toFixed(1)),
+            reviewCount: maidBookings.length,
+            experience: `${category} service`,
+            jobs: `${maidBookings.length} ${maidBookings.length === 1 ? 'review' : 'reviews'}`,
+            location: record.C_BPartner_ID?.identifier || 'Location on request',
+            price: record.MCS_Rate != null
+              ? `${currency ? `${currency} ` : ''}${record.MCS_Rate}${rateSuffix}`
+              : 'Contact for rate',
+            languages: languages.length > 0 ? languages : ['Contact for languages'],
+            about: record.MCS_About || '',
+            skills: [category, ...languages],
+            workingHours: /hour/i.test(category) ? 'Hourly availability' : 'Contact for availability',
+            days: 'Contact for availability',
+            startDate: record.IsActive === false ? 'Unavailable' : 'Available now',
+            reviews: [],
+            tag: category,
+            phone: record.Phone || '',
+          };
+        };
+
+        if (recordId) {
+          const maid = await fetchModelRecord('MCS_Maid', recordId);
+          data = mapMaid(maid);
+        } else {
+          const rawMaids = await fetchModel('MCS_Maid', undefined, {
+            top: 100,
+            orderby: 'Updated desc',
+          });
+          data = rawMaids
+            .filter((record: any) => record.IsActive !== false)
+            .map(mapMaid);
+        }
+        break;
+      }
       case 'tiffin':
         const rawTiffin = await fetchModel('MCS_TiffinProvider');
         data = rawTiffin.map((record: any) => {
@@ -413,39 +497,60 @@ export async function GET(
         });
         break;
 
-      case 'housing':
-        const rawHousing = await fetchModel('MCS_Accommodation_Listings');
-        // Join images from the separate MCS_Accommodation_Images table (base64 in AD_Image_ID.data)
-        const rawHousingImages = await fetchModel('MCS_Accommodation_Images');
-        const housingImgMap: Record<string, string> = {};
-        for (const img of rawHousingImages) {
-          const listingId = (typeof img.MCS_Accommodation_Listings_ID === 'object'
-            ? img.MCS_Accommodation_Listings_ID?.id
-            : img.MCS_Accommodation_Listings_ID)?.toString();
-          const imgData = img.AD_Image_ID?.data;
-          if (!listingId || !imgData) continue;
-          // Prefer the primary image if multiple exist
-          if (!housingImgMap[listingId] || img.IsPrimary) {
-            housingImgMap[listingId] = `data:image/jpeg;base64,${imgData}`;
-          }
-        }
-        data = rawHousing.map((record: any) => ({
-          id: record.id.toString(),
-          title: `${record.SP_Accommodation_Type?.identifier || 'Room'} in ${record.SP_Area || record.City || 'Area'}`,
-          city: record.City || 'City',
-          rent: record.SP_Rent_Amount ? `$${record.SP_Rent_Amount}/${record.SP_Rent_Period === 'Monthly' ? 'mo' : 'wk'}` : '-',
-          type: record.SP_Accommodation_Type?.identifier || 'Roommate',
-          gender: record.SP_Gender_Preference?.identifier || 'Anyone',
-          size: record.SP_Max_Occupants ? `${record.SP_Max_Occupants} Person(s)` : 'Shared',
-          host: record.Posted_By_User_ID?.identifier || 'Community Member',
-          stay: 'Long-term',
-          tone: getTone(record.id),
-          image: housingImgMap[record.id.toString()],
-          nearMe: false,
-          student: false
-        }));
-        break;
+      case 'housing': {
+        const rawHousing = await fetchModel('MCS_Accommodation', undefined, {
+          top: 100,
+          orderby: 'Updated desc',
+        });
+        data = rawHousing
+          .filter((record: any) => record.IsActive !== false && record.SP_Listing_Status?.identifier !== 'Inactive')
+          .map((record: any) => {
+            const accommodationType = record.SP_Accommodation_Type?.identifier || 'Accommodation';
+            const area = record.SP_Area || '';
+            const city = record.City || '';
+            const country = record.C_Country_ID?.identifier || '';
+            const location = [area, city, country].filter(Boolean).join(', ') || 'Location unavailable';
+            const currency = record.C_Currency_ID?.identifier || '';
+            const rentPeriod = record.SP_Rent_Period?.identifier
+              || (typeof record.SP_Rent_Period === 'string' ? record.SP_Rent_Period : '');
+            const periodSuffix = /^monthly$/i.test(rentPeriod)
+              ? '/mo'
+              : /^weekly$/i.test(rentPeriod)
+                ? '/wk'
+                : /^daily$/i.test(rentPeriod)
+                  ? '/day'
+                  : rentPeriod ? `/${rentPeriod}` : '';
 
+            return {
+              id: record.id.toString(),
+              title: `${accommodationType} in ${area || city || country || 'available location'}`,
+              city: location,
+              rent: record.SP_Rent_Amount != null
+                ? `${currency ? `${currency} ` : ''}${record.SP_Rent_Amount}${periodSuffix}`
+                : 'Contact for rent',
+              type: accommodationType,
+              gender: record.SP_Gender_Preference?.identifier || 'Anyone',
+              size: record.SP_Max_Occupants ? `${record.SP_Max_Occupants} Person(s)` : 'Shared',
+              host: record.Posted_By_User_ID?.identifier || 'Community Member',
+              stay: record.SP_Available_Until ? 'Short stay' : 'Long-term',
+              tone: getTone(record.id),
+              nearMe: false,
+              student: /student|pg|paying guest/i.test(accommodationType),
+              description: record.SP_Additional_Info || '',
+              availableFrom: record.SP_Available_From || '',
+              availableUntil: record.SP_Available_Until || '',
+              amenities: {
+                wifi: record.SP_Has_WiFi === true,
+                kitchen: record.SP_Has_Kitchen_Access === true,
+                laundry: record.SP_Has_Laundry === true,
+                furnished: record.SP_Is_Furnished === true,
+                parking: record.SP_Has_Parking === true,
+                airConditioning: record.SP_Has_AC === true,
+              },
+            };
+          });
+        break;
+      }
       case 'offers':
         const rawOffers = await fetchModel('MCS_Offers');
         data = rawOffers.map((record: any) => ({
@@ -633,18 +738,105 @@ export async function GET(
         });
         break;
 
-      case 'housing-requests':
-        const rawReqs = await fetchModel('MCS_Accommodation_Requirements');
-        data = rawReqs.map((record: any) => ({
-          name: record.Posted_By_User_ID?.identifier || 'User',
-          looking: record.SP_Accommodation_Type?.identifier || (typeof record.SP_Accommodation_Type === 'string' ? record.SP_Accommodation_Type : 'Place'),
-          budget: record.SP_Rent_Amount ? `$${record.SP_Rent_Amount}` : 'Flexible',
-          when: record.SP_Available_From ? new Date(record.SP_Available_From).toLocaleDateString() : 'Soon',
-          note: record.SP_Additional_Info || '',
-          tone: getTone(record.id)
-        }));
-        break;
+      case 'housing-requests': {
+        const rawReqs = await fetchModel('MCS_Accommodation_Requirements', undefined, {
+          top: 100,
+          orderby: 'Updated desc',
+        });
+        data = rawReqs
+          .filter((record: any) => record.IsActive !== false)
+          .map((record: any) => {
+            const currency = record.C_Currency_ID?.identifier || '';
+            const location = [record.SP_Area, record.City, record.C_Country_ID?.identifier]
+              .filter(Boolean)
+              .join(', ');
 
+            return {
+              name: record.Posted_By_User_ID?.identifier || 'Community Member',
+              looking: location || record.SP_Accommodation_Type?.identifier || 'Place',
+              budget: record.SP_Rent_Amount
+                ? `${currency ? `${currency} ` : ''}${record.SP_Rent_Amount}`
+                : 'Flexible',
+              when: record.SP_Available_From
+                ? new Date(record.SP_Available_From).toLocaleDateString()
+                : 'Flexible',
+              note: record.SP_Additional_Info || '',
+              tone: getTone(record.id),
+            };
+          });
+        break;
+      }
+      case 'embassy': {
+        const mapEmbassy = (record: any) => ({
+          id: record.id.toString(),
+          type: /consulate/i.test(record.Name || '') ? 'CONSULATE' : 'EMBASSY',
+          status: record.IsActive === false ? 'Closed' : 'Open',
+          name: record.Name || 'Embassy',
+          location: record.Address || record.C_Country_ID?.identifier || 'Address unavailable',
+          hours: 'Contact mission for hours',
+          distance: record.C_Country_ID?.identifier || '',
+          telephone: record.Phone || record.MCS_EmergencyPhone || '',
+          email: record.EMail || '',
+          website: record.URL || '',
+          address: record.Address || '',
+          jurisdiction: record.Help || record.Description || '',
+          services: typeof record.MCS_Services === 'string'
+            ? record.MCS_Services.split(',').map((service: string) => service.trim()).filter(Boolean)
+            : [],
+          emergencyPhone: record.MCS_EmergencyPhone || '',
+          country: record.C_Country_ID?.identifier || '',
+          updated: record.Updated || '',
+          schedule: {
+            submission: 'Contact mission',
+            collection: 'Contact mission',
+            weekend: 'Contact mission',
+            holidays: 'As per mission calendar',
+          },
+        });
+
+        if (recordId) {
+          const embassy = await fetchModelRecord('MCS_Embassy', recordId);
+          data = mapEmbassy(embassy);
+        } else {
+          const rawEmbassies = await fetchModel('MCS_Embassy', undefined, {
+            top: pageSize,
+            skip: skipRecords,
+            orderby: 'Updated desc',
+          });
+          data = rawEmbassies.map(mapEmbassy);
+        }
+        break;
+      }
+      case 'emergency-contacts': {
+        const rawContacts = await fetchModel('MCS_EmergencyContact', undefined, {
+          top: 10,
+          orderby: 'Updated desc',
+        });
+        data = rawContacts
+          .filter((record: any) => record.IsActive !== false)
+          .map((record: any) => {
+            const category = record.MCS_Category?.identifier || 'Emergency';
+            const color = /police|emergency/i.test(category)
+              ? '#8C3123'
+              : /medical|ambulance|health/i.test(category)
+                ? '#2E7D32'
+                : '#284E9C';
+
+            return {
+              id: record.id.toString(),
+              title: record.Name || 'Emergency Contact',
+              subtitle: record.Description || record.Help || category,
+              phone: record.Phone || '',
+              color,
+              isLink: false,
+              email: record.EMail || '',
+              category,
+              country: record.C_Country_ID?.identifier || '',
+              is24Hours: record.MCS_Is24Hours === true,
+            };
+          });
+        break;
+      }
       case 'help-topics':
         const rawTopics = await fetchModel('MCS_HelpTopic');
         data = rawTopics.map((record: any) => ({

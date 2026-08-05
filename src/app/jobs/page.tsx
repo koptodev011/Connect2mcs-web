@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { C, F } from '@/lib/tokens';
 import Icon from '@/components/Icon';
@@ -9,27 +9,72 @@ import { Job } from '@/data/jobs';
 import { toneBg, toneColor } from '@/lib/tones';
 import { PostJobModal } from '@/components/FormModals';
 
+const PAGE_SIZE = 10;
+
 const cats = ['All', 'Tech', 'Design', 'Editorial', 'Operations', 'Volunteer'];
 const locs = ['Anywhere', 'India', 'USA', 'UK', 'Remote'];
 
 export default function JobsPage() {
   const [jobsData, setJobsData] = useState<Job[]>([]);
+  const [activeId, setActiveId] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [postJobOpen, setPostJobOpen] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const loadingRef = useRef(false);
   const router = useRouter();
-  
+
   useEffect(() => {
-    fetch('/api/data/jobs')
+    fetch(`/api/data/jobs?top=${PAGE_SIZE}&skip=0`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
           setJobsData(data);
+          setHasMore(data.length === PAGE_SIZE);
           if (data.length > 0) setActiveId(data[0].id);
         }
         setLoading(false);
       })
       .catch(console.error);
   }, []);
+
+  const loadMoreJobs = useCallback(async (skip: number) => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+    await Promise.resolve();
+    setLoadingMore(true);
+
+    try {
+      const response = await fetch(`/api/data/jobs?top=${PAGE_SIZE}&skip=${skip}`);
+      if (!response.ok) throw new Error('Failed to load more jobs');
+      const data = await response.json();
+      if (!Array.isArray(data)) return;
+
+      setJobsData(current => [
+        ...current,
+        ...data.filter(job => !current.some(existing => existing.id === job.id)),
+      ]);
+      setHasMore(data.length === PAGE_SIZE);
+    } catch (error) {
+      console.error('Jobs pagination error:', error);
+    } finally {
+      loadingRef.current = false;
+      setLoadingMore(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target || loading || loadingMore || !hasMore) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) void loadMoreJobs(jobsData.length);
+    }, { rootMargin: '300px' });
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasMore, jobsData.length, loadMoreJobs, loading, loadingMore]);
 
   const [activeCat, setActiveCat] = useState('All');
   const [activeLoc, setActiveLoc] = useState('Anywhere');
@@ -56,7 +101,6 @@ export default function JobsPage() {
     return 0; // Best match
   });
 
-  const [activeId, setActiveId] = useState<string>('');
   const j = sortedJobs.find(x => x.id === activeId) ?? sortedJobs[0];
 
   const [applied, setApplied] = useState<Set<string>>(new Set());
@@ -162,6 +206,8 @@ export default function JobsPage() {
                 </div>
               </div>
             ))}
+            {hasMore && <div ref={loadMoreRef} aria-hidden="true" style={{ height: 1 }} />}
+            {loadingMore && <div style={{ padding: '14px 18px', textAlign: 'center', color: C.ink3, fontSize: 12 }}>Loading more jobs...</div>}
           </Card>
 
           {/* Detail panel */}
@@ -169,7 +215,7 @@ export default function JobsPage() {
             <ImgPh kind="job" height={120} tone={j.tone}/>
             <div style={{ padding: '20px 22px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
-                <div style={{ width: 56, height: 56, borderRadius: 12, marginTop: -40, background: '#fff', border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.saffronDk, fontSize: 26, fontWeight: 700, fontFamily: F.display, letterSpacing: '-0.025em', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>{j.logo}</div>
+                <div style={{ width: 56, height: 56, borderRadius: 12,  background: '#fff', border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.saffronDk, fontSize: 26, fontWeight: 700, fontFamily: F.display, letterSpacing: '-0.025em', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>{j.logo}</div>
                 <div style={{ flex: 1 }}>
                   <h2 style={{ margin: 0, fontFamily: F.display, fontSize: 22, fontWeight: 600, letterSpacing: '-0.025em', lineHeight: 1.2, color: C.ink }}>{j.role}</h2>
                   <div style={{ fontSize: 13.5, color: C.ink2, marginTop: 4, fontWeight: 600 }}>{j.co} · {j.loc}</div>
