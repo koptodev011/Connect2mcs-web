@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import { C, F } from '@/lib/tokens';
 import Icon from '@/components/Icon';
 import { Btn, Card, ImgPh, Rating, Avatar, useGlobalToast } from '@/components/primitives';
@@ -39,8 +39,59 @@ export default function MandalDetailPage({ params }: { params: Promise<{ id: str
   const [contactOpen, setContactOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
   const [joined, setJoined] = useState(false);
+  const [joinInitialValues, setJoinInitialValues] = useState<Record<string, string>>({});
   const [rsvps, setRsvps] = useState<Set<string>>(new Set());
   const toast = useGlobalToast();
+  const router = useRouter();
+
+  const handleJoinMandal = async () => {
+    if (joined) {
+      setJoined(false);
+      return;
+    }
+
+    try {
+      const savedUser = localStorage.getItem('mcs_user');
+      const user = savedUser ? JSON.parse(savedUser) : null;
+      if (!user || user.isGuest) {
+        router.push('/login');
+        return;
+      }
+
+      let profile = user;
+      if (user.name) {
+        const response = await fetch(`/api/data/profile?username=${encodeURIComponent(user.name)}`);
+        const profiles = response.ok ? await response.json() : [];
+        if (Array.isArray(profiles) && profiles[0]) profile = { ...user, ...profiles[0] };
+      }
+
+      setJoinInitialValues({
+        name: String(profile.name || profile.Name || user.name || ''),
+        email: String(profile.email || profile.EMail || user.email || ''),
+        phone: String(profile.phone || profile.Phone || profile.Phone2 || user.phone || ''),
+        note: '',
+      });
+      setJoinOpen(true);
+    } catch {
+      router.push('/login');
+    }
+  };
+
+  const submitJoinRequest = async (form: Record<string, string>) => {
+    if (!form.name.trim() || !form.email.trim() || !form.phone.trim()) {
+      throw new Error('Name, email, and contact number are required');
+    }
+    if (!mandal?.id) throw new Error('Mandal details are unavailable');
+
+    const response = await fetch('/api/mandal-membership', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mandalId: mandal.id, ...form }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || 'Could not send membership request');
+    setJoined(true);
+  };
 
   const handleShare = () => {
     if (navigator.share) {
@@ -79,14 +130,15 @@ export default function MandalDetailPage({ params }: { params: Promise<{ id: str
           
           if (Array.isArray(parsedDetails.committee) && parsedDetails.committee.length > 0) {
             setCommittee(parsedDetails.committee);
-          } else {
-            setCommittee([
-              { name: 'Dr. Ramesh Deshpande', role: 'President', email: `president@${found.code.toLowerCase()}.org`, avatar: 'RD' },
-              { name: 'Sunita Kulkarni', role: 'Secretary', email: `secretary@${found.code.toLowerCase()}.org`, avatar: 'SK' },
-              { name: 'Rahul Joshi', role: 'Treasurer', email: `treasurer@${found.code.toLowerCase()}.org`, avatar: 'RJ' },
-              { name: 'Priya Joshi-Patil', role: 'Cultural Coordinator', email: `cultural@${found.code.toLowerCase()}.org`, avatar: 'PJP' },
-            ]);
-          }
+          } 
+          // else {
+          //   setCommittee([
+          //     { name: 'Dr. Ramesh Deshpande', role: 'President', email: `president@${found.code.toLowerCase()}.org`, avatar: 'RD' },
+          //     { name: 'Sunita Kulkarni', role: 'Secretary', email: `secretary@${found.code.toLowerCase()}.org`, avatar: 'SK' },
+          //     { name: 'Rahul Joshi', role: 'Treasurer', email: `treasurer@${found.code.toLowerCase()}.org`, avatar: 'RJ' },
+          //     { name: 'Priya Joshi-Patil', role: 'Cultural Coordinator', email: `cultural@${found.code.toLowerCase()}.org`, avatar: 'PJP' },
+          //   ]);
+          // }
 
           if (Array.isArray(parsedDetails.gallery)) {
             setGallery(parsedDetails.gallery);
@@ -173,10 +225,10 @@ export default function MandalDetailPage({ params }: { params: Promise<{ id: str
               <div className="num" style={{ fontFamily: F.display, fontSize: 28, fontWeight: 700, color: C.ink }}>{mandal.events}</div>
               <div style={{ fontSize: 11, fontWeight: 700, color: C.ink3, letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 4 }}>Events this year</div>
             </div>
-            <div>
+            {/* <div>
               <div className="num" style={{ fontFamily: F.display, fontSize: 28, fontWeight: 700, color: primaryColor }}>{mandal.dist || 'Local'}</div>
               <div style={{ fontSize: 11, fontWeight: 700, color: C.ink3, letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 4 }}>Distance from you</div>
-            </div>
+            </div> */}
           </div>
         </div>
       </Card>
@@ -213,10 +265,18 @@ export default function MandalDetailPage({ params }: { params: Promise<{ id: str
                   Interact with Us
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <Btn kind={joined ? 'soft' : 'primary'} size="lg" full iconL={joined ? 'check' : 'plus'} onClick={() => joined ? setJoined(false) : setJoinOpen(true)} style={{ background: joined ? lightBgColor : primaryColor, borderColor: joined ? lightBgColor : primaryColor, color: joined ? primaryColor : '#fff' }}>
+                  <Btn kind={joined ? 'soft' : 'primary'} size="lg" full iconL={joined ? 'check' : 'plus'} onClick={handleJoinMandal} style={{ background: joined ? lightBgColor : primaryColor, borderColor: joined ? lightBgColor : primaryColor, color: joined ? primaryColor : '#fff' }}>
                     {joined ? 'Membership pending' : 'Join Mandal'}
                   </Btn>
-                  <Btn kind="outline" size="lg" full onClick={() => setContactOpen(true)}>Contact Committee</Btn>
+                  {/* <Btn kind="outline" size="lg" full onClick={() => setContactOpen(true)}>Contact Committee</Btn> */}
+                 {mandal.phone && <Btn kind="outline" size="lg" full onClick={() => window.open(`tel:${mandal.phone}`, '_self')} style={{ color: primaryColor, borderColor: primaryColor }}>
+                  <Icon name="phone" size={18} color={primaryColor} />
+                  Call {mandal.phone}
+                 </Btn>}
+                 {mandal.whatsapp && <Btn kind="outline" size="lg" full onClick={() => window.open(`https://wa.me/${mandal.whatsapp}`, '_blank')} style={{ color: primaryColor, borderColor: primaryColor }}>
+                  <Icon name="whatsapp" size={18} color={primaryColor} />
+                  WhatsApp {mandal.whatsapp}
+                 </Btn>}
                   <Btn kind="ghost" size="lg" full onClick={handleShare}><Icon name="share" size={18} color={C.ink} /> Share Mandal</Btn>
                   {mandal.email && (
                     <a href={`mailto:${mandal.email}`} style={{
@@ -257,6 +317,7 @@ export default function MandalDetailPage({ params }: { params: Promise<{ id: str
       </section>
 
       {/* 3. Committee Section */}
+      {committee.length > 0 && (
       <section id="committee">
         <OrnamentDivider label="Committee" marathi="कार्यकारिणी" align="left" />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 20, marginTop: 12 }}>
@@ -315,6 +376,7 @@ export default function MandalDetailPage({ params }: { params: Promise<{ id: str
           ))}
         </div>
       </section>
+      )}
 
       {/* 4. Gallery Section */}
       {gallery.length > 0 && (
@@ -405,14 +467,19 @@ export default function MandalDetailPage({ params }: { params: Promise<{ id: str
 
       {/* Modals */}
       <ContactModal isOpen={contactOpen} onClose={() => setContactOpen(false)} title={`Contact ${mandal.name}`} subtitle="Direct message to the committee" />
-      <BookModal 
+      {joinOpen && <BookModal 
         isOpen={joinOpen} onClose={() => setJoinOpen(false)}
         title={`Join ${mandal.name}`} marathi="सामील व्हा"
         submitLabel="Submit membership request"
+        initialValues={joinInitialValues}
+        onSubmit={submitJoinRequest}
         fields={[
+          { key: 'name', label: 'Name', placeholder: 'Your name' },
+          { key: 'email', label: 'Email', placeholder: 'you@example.com', type: 'email' },
+          { key: 'phone', label: 'Contact number', placeholder: 'Your contact number', type: 'tel' },
           { key: 'note', label: 'Why do you want to join?', placeholder: 'Optional note...', multiline: true },
         ]}
-      />
+      />}
     </div>
   );
 }

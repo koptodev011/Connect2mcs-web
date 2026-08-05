@@ -10,20 +10,14 @@ import { useMobileMenu } from './MobileMenuContext';
 import { useLocation } from './LocationContext';
 import { useGlobalToast } from './primitives';
 
-const POPULAR_CITIES = [
-  { city: 'Boston', country: 'USA', region: 'MA' },
-  { city: 'New York', country: 'USA', region: 'NY' },
-  { city: 'San Francisco', country: 'USA', region: 'CA' },
-  { city: 'Edison', country: 'USA', region: 'NJ' },
-  { city: 'Chicago', country: 'USA', region: 'IL' },
-  { city: 'London', country: 'UK', region: '' },
-  { city: 'Toronto', country: 'Canada', region: 'ON' },
-  { city: 'Sydney', country: 'Australia', region: 'NSW' },
-  { city: 'Dubai', country: 'UAE', region: '' },
-  { city: 'Singapore', country: 'Singapore', region: '' },
-  { city: 'Pune', country: 'India', region: 'MH' },
-  { city: 'Mumbai', country: 'India', region: 'MH' },
-];
+interface CountryOption {
+  id: string;
+  name: string;
+  code: string;
+  alpha3?: string;
+}
+
+const ALL_COUNTRIES: CountryOption = { id: 'all', name: 'All', code: '' };
 
 const NOTIFICATIONS = [
   { id: '1', icon: 'cal', color: C.saffron, bg: C.saffronLt, title: 'Marathi Food Festival is in 6 days', sub: 'Edison, NJ · 412 going', time: '2h ago', read: false },
@@ -49,6 +43,7 @@ export default function Header() {
 
   const [locationModalOpen, setLocationModalOpen] = useState(false);
   const [citySearch, setCitySearch] = useState('');
+  const [countries, setCountries] = useState<CountryOption[]>([ALL_COUNTRIES]);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState(NOTIFICATIONS);
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,38 +51,69 @@ export default function Header() {
   const searchRef = useRef<HTMLInputElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
-  const [currentUser, setCurrentUser] = useState<{ name: string; city?: string; avatar?: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ name: string; city?: string; country?: string; avatar?: string; isGuest?: boolean } | null>(null);
 
   useEffect(() => {
-    function loadUser() {
+    fetch('/api/data/countries')
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to load countries');
+        return response.json();
+      })
+      .then(data => {
+        if (Array.isArray(data)) setCountries([ALL_COUNTRIES, ...data]);
+      })
+      .catch(error => console.error('Countries API error:', error));
+  }, []);
+
+  useEffect(() => {
+    const inferCountry = (city?: string) => {
+      const value = (city || '').toLowerCase();
+      if (/mumbai|pune|india/.test(value)) return 'India';
+      if (/london|united kingdom|\buk\b/.test(value)) return 'United Kingdom';
+      if (/boston|new york|united states|\busa\b/.test(value)) return 'United States';
+      return 'All';
+    };
+
+    function loadUser(forceUserCountry = false) {
       const saved = localStorage.getItem('mcs_user');
+      let user: { name: string; city?: string; country?: string; avatar?: string; isGuest?: boolean } | null = null;
       if (saved) {
-        try {
-          setCurrentUser(JSON.parse(saved));
-        } catch {
-          setCurrentUser(null);
-        }
-      } else {
-        setCurrentUser(null);
+        try { user = JSON.parse(saved); } catch { user = null; }
+      }
+      setCurrentUser(user);
+
+      if (!user || user.isGuest) {
+        setLocation({ city: 'All', country: 'All' });
+        return;
+      }
+
+      const hasSavedSelection = Boolean(localStorage.getItem('mcs_location'));
+      if (forceUserCountry || !hasSavedSelection) {
+        const userCountry = user.country || inferCountry(user.city);
+        setLocation({ city: userCountry, country: userCountry });
       }
     }
 
-    loadUser();
-    window.addEventListener('mcs_auth_change', loadUser);
-    return () => window.removeEventListener('mcs_auth_change', loadUser);
-  }, []);
+    const handleAuthChange = () => loadUser(true);
+    loadUser(false);
+    window.addEventListener('mcs_auth_change', handleAuthChange);
+    return () => window.removeEventListener('mcs_auth_change', handleAuthChange);
+  }, [setLocation]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const filteredCities = POPULAR_CITIES.filter(c =>
-    citySearch === '' || c.city.toLowerCase().includes(citySearch.toLowerCase()) || c.country.toLowerCase().includes(citySearch.toLowerCase())
+  const filteredCountries = countries.filter(country =>
+    citySearch === ''
+    || country.name.toLowerCase().includes(citySearch.toLowerCase())
+    || country.code.toLowerCase().includes(citySearch.toLowerCase())
   );
 
-  function handleCitySelect(c: typeof POPULAR_CITIES[0]) {
-    setLocation(c);
+  function handleCountrySelect(country: CountryOption) {
+    setLocation({ city: country.name, country: country.name, region: country.code || undefined });
     setLocationModalOpen(false);
     setCitySearch('');
-    toast.add(`Location set to ${c.city}`, 'success');
+    toast.add(`Country set to ${country.name}`, 'success');
+    window.setTimeout(() => window.location.reload(), 50);
   }
 
   function handleSearch(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -385,38 +411,39 @@ export default function Header() {
       {/* Location Picker Modal */}
       <Modal isOpen={locationModalOpen} onClose={() => { setLocationModalOpen(false); setCitySearch(''); }} title="Change your location" marathi="स्थान बदला" width={440}>
         <Field
-          label="Search city"
+          label="Search country"
           value={citySearch}
           onChange={setCitySearch}
           placeholder="Boston, London, Pune…"
         />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 420, overflowY: 'auto' }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: C.ink3, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>
-            {citySearch ? 'Results' : 'Popular cities'}
+            {citySearch ? 'Results' : 'Countries'}
           </div>
-          {filteredCities.length === 0 && (
-            <div style={{ padding: '20px 0', textAlign: 'center', color: C.ink3, fontSize: 13 }}>No cities found</div>
+          {filteredCountries.length === 0 && (
+            <div style={{ padding: '20px 0', textAlign: 'center', color: C.ink3, fontSize: 13 }}>No countries found</div>
           )}
-          {filteredCities.map((c, i) => (
+          {filteredCountries.map(country => (
             <button
-              key={i}
-              onClick={() => handleCitySelect(c)}
+              key={country.id}
+              onClick={() => handleCountrySelect(country)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '12px 14px', borderRadius: 10, border: `1px solid ${C.line}`,
-                background: location.city === c.city ? C.saffronLt : '#fff',
+                background: location.country === country.name ? C.saffronLt : '#fff',
                 cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
                 transition: 'all 0.12s',
               }}
             >
-              <Icon name="pin" size={16} color={location.city === c.city ? C.saffronDk : C.ink3}/>
+              <Icon name="pin" size={16} color={location.country === country.name ? C.saffronDk : C.ink3}/>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: location.city === c.city ? C.saffronDk : C.ink }}>
-                  {c.city}{c.region ? `, ${c.region}` : ''}
+                <div style={{ fontSize: 14, fontWeight: 700, color: location.country === country.name ? C.saffronDk : C.ink }}>
+                  {country.name}
+
                 </div>
-                <div style={{ fontSize: 11.5, color: C.ink3, fontWeight: 500 }}>{c.country}</div>
+                <div style={{ fontSize: 11.5, color: C.ink3, fontWeight: 500 }}>{country.code || (country.name === 'All' ? 'Show data from every country' : '')}</div>
               </div>
-              {location.city === c.city && (
+              {location.country === country.name && (
                 <div style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: C.saffronDk }}>Current</div>
               )}
             </button>

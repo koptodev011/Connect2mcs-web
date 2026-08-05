@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useSyncExternalStore, ReactNode } from 'react';
 
 interface Location {
   city: string;
@@ -13,30 +13,57 @@ interface LocationContextType {
   setLocation: (loc: Location) => void;
 }
 
-const DEFAULT_LOCATION: Location = { city: 'Boston', country: 'USA', region: 'MA' };
+const DEFAULT_LOCATION: Location = { city: 'All', country: 'All' };
+const LOCATION_EVENT = 'mcs_location_change';
+let cachedRaw: string | null | undefined;
+let cachedLocation: Location = DEFAULT_LOCATION;
+
+function getLocationSnapshot(): Location {
+  try {
+    const raw = localStorage.getItem('mcs_location');
+    if (raw === cachedRaw) return cachedLocation;
+    cachedRaw = raw;
+    cachedLocation = raw ? JSON.parse(raw) as Location : DEFAULT_LOCATION;
+    return cachedLocation;
+  } catch {
+    return DEFAULT_LOCATION;
+  }
+}
+
+function subscribeToLocation(callback: () => void) {
+  window.addEventListener('storage', callback);
+  window.addEventListener(LOCATION_EVENT, callback);
+  return () => {
+    window.removeEventListener('storage', callback);
+    window.removeEventListener(LOCATION_EVENT, callback);
+  };
+}
+
+function persistLocation(loc: Location) {
+  try {
+    const raw = JSON.stringify(loc);
+    localStorage.setItem('mcs_location', raw);
+    document.cookie = `mcs_country=${encodeURIComponent(loc.country)}; path=/; max-age=31536000; SameSite=Lax`;
+    cachedRaw = raw;
+    cachedLocation = loc;
+    window.dispatchEvent(new Event(LOCATION_EVENT));
+  } catch {}
+}
 
 const LocationContext = createContext<LocationContextType>({
   location: DEFAULT_LOCATION,
-  setLocation: () => {},
+  setLocation: persistLocation,
 });
 
 export function LocationProvider({ children }: { children: ReactNode }) {
-  const [location, setLocationState] = useState<Location>(DEFAULT_LOCATION);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('mcs_location');
-      if (saved) setLocationState(JSON.parse(saved));
-    } catch {}
-  }, []);
-
-  const setLocation = (loc: Location) => {
-    setLocationState(loc);
-    try { localStorage.setItem('mcs_location', JSON.stringify(loc)); } catch {}
-  };
+  const location = useSyncExternalStore(
+    subscribeToLocation,
+    getLocationSnapshot,
+    () => DEFAULT_LOCATION,
+  );
 
   return (
-    <LocationContext.Provider value={{ location, setLocation }}>
+    <LocationContext.Provider value={{ location, setLocation: persistLocation }}>
       {children}
     </LocationContext.Provider>
   );

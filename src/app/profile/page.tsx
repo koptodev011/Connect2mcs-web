@@ -36,7 +36,19 @@ export default function ProfilePage() {
     fetch(url)
       .then(res => res.json())
       .then(data => {
-        if (data.length > 0) setMe(data[0]);
+        if (data.length > 0) {
+          setMe(data[0]);
+          try {
+            const savedUser = localStorage.getItem('mcs_user');
+            if (savedUser && data[0].country) {
+              const user = JSON.parse(savedUser);
+              if (!user.isGuest && user.country !== data[0].country) {
+                localStorage.setItem('mcs_user', JSON.stringify({ ...user, country: data[0].country }));
+                window.dispatchEvent(new Event('mcs_auth_change'));
+              }
+            }
+          } catch {}
+        }
         setLoading(false);
       })
       .catch(err => {
@@ -241,6 +253,7 @@ function EditPanel({ me }: { me: CurrentUser }) {
         <Field label="Email" value={me.email}/>
         <Field label="Phone" value={me.phone}/>
         <Field label="City" value={me.city}/>
+        <Field label="Country" value={me.country}/>
         <Field label="Origin" value={me.origin}/>
         <Field label="Mandal" value={me.mandal}/>
         <Field label="Member type" value={me.type}/>
