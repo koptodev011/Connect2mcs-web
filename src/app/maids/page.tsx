@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { C, F } from '@/lib/tokens';
 import { Card, SectionHead, Btn, Tag, Avatar, useGlobalToast } from '@/components/primitives';
 import Icon from '@/components/Icon';
@@ -9,13 +9,28 @@ import { helpers } from '@/data/maids';
 import { BookModal, FilterModal } from '@/components/FormModals';
 
 export default function MaidsPage() {
-  const topRated = helpers.filter(h => h.rating >= 4.9);
+  const [helpersData, setHelpersData] = useState(helpers);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
   const [bookOpen, setBookOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedHelper, setSelectedHelper] = useState('');
   const toast = useGlobalToast();
+  const topRated = [...helpersData]
+    .sort((a, b) => b.rating - a.rating)
+    .slice(0, 10);
+
+  useEffect(() => {
+    fetch('/api/data/maids')
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to load maid services');
+        return response.json();
+      })
+      .then(data => {
+        if (Array.isArray(data)) setHelpersData(data);
+      })
+      .catch(error => console.error('Maid services API error:', error));
+  }, []);
 
   const filterTypes: Record<string, (h: typeof helpers[0]) => boolean> = {
     All: () => true,
@@ -24,15 +39,15 @@ export default function MaidsPage() {
     'Live-in': h => h.services.toLowerCase().includes('live'),
   };
 
-  const filtered = helpers.filter(h => {
+  const filtered = helpersData.filter(h => {
     const matchFilter = filterTypes[activeFilter]?.(h) ?? true;
     const matchSearch = !searchQuery || h.name.toLowerCase().includes(searchQuery.toLowerCase()) || h.services.toLowerCase().includes(searchQuery.toLowerCase()) || h.location.toLowerCase().includes(searchQuery.toLowerCase());
     return matchFilter && matchSearch;
   });
-  
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 36 }}>
-      
+
       {/* Header & Search */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
@@ -44,15 +59,7 @@ export default function MaidsPage() {
               Trusted help from the Marathi community
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <div style={{ position: 'relative' }}>
-              <button style={{ width: 44, height: 44, borderRadius: '50%', background: C.bgDeep, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={() => toast.add('Notifications coming soon', 'success')}>
-                <Icon name="bell" size={20} color={C.ink2} />
-              </button>
-              <div style={{ position: 'absolute', top: -2, right: -2, background: C.brick, color: '#fff', fontSize: 10, fontWeight: 700, width: 18, height: 18, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>2</div>
-            </div>
-            <Avatar name="Anuja K" size={44} />
-          </div>
+
         </div>
 
         <div style={{ display: 'flex', gap: 12 }}>
@@ -79,19 +86,12 @@ export default function MaidsPage() {
               <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
                 <div style={{ position: 'relative' }}>
                   <Avatar name={helper.name} size={52} />
-                  {helper.verified && (
-                    <div style={{ position: 'absolute', bottom: -2, right: -2, background: '#fff', borderRadius: '50%', padding: 2 }}>
-                      <div style={{ background: C.green, width: 14, height: 14, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Icon name="verify" size={10} color="#fff" />
-                      </div>
-                    </div>
-                  )}
+                 
                 </div>
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 700, color: C.ink, display: 'flex', alignItems: 'center', gap: 6 }}>
                     {helper.name}
                   </div>
-                  <div style={{ fontSize: 12, color: C.ink3, marginTop: 2 }}>{helper.services}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, fontSize: 11, fontWeight: 700, color: C.ink }}>
                     <span style={{ color: C.saffron }}>★</span> {helper.rating}
                   </div>
@@ -120,7 +120,7 @@ export default function MaidsPage() {
 
       {/* Available Near You Grid */}
       <section>
-        <SectionHead title="Available Near You" subtitle="240+ helpers in Mumbai" />
+        <SectionHead title="Available Near You" subtitle={`${helpersData.length} helpers available`} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
           {filtered.map(helper => (
             <Card key={helper.id} pad={20}>
@@ -132,10 +132,9 @@ export default function MaidsPage() {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{helper.name}</div>
-                      {helper.verified && <Icon name="verify" size={14} color={C.green} />}
                       {helper.tag && <span style={{ background: '#FFF1F0', color: C.brick, padding: '2px 6px', borderRadius: 4, fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>{helper.tag}</span>}
                     </div>
-                    <div style={{ fontSize: 12, color: C.ink3, marginTop: 2, fontWeight: 500 }}>{helper.services}</div>
+                  
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, fontSize: 11, fontWeight: 600, color: C.ink2 }}>
                       <span style={{ color: C.saffron }}>★</span> {helper.rating} <span style={{ color: C.line }}>|</span> {helper.jobs}
                     </div>

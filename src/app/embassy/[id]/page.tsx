@@ -1,24 +1,42 @@
 'use client';
 
-import { use } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { C, F } from '@/lib/tokens';
-import { Card, SectionHead, Btn, useGlobalToast } from '@/components/primitives';
+import { Card, Btn, useGlobalToast } from '@/components/primitives';
 import Icon from '@/components/Icon';
 import { missions } from '@/data/embassy';
 
 export default function EmbassyDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
-  const mission = missions.find(m => m.id === resolvedParams.id);
+  const fallbackMission = missions.find(m => m.id === resolvedParams.id) || null;
+  const [mission, setMission] = useState(fallbackMission);
+  const [loading, setLoading] = useState(!fallbackMission);
   const toast = useGlobalToast();
-  
-  if (!mission) {
-    notFound();
+
+  useEffect(() => {
+    fetch(`/api/data/embassy?id=${encodeURIComponent(resolvedParams.id)}`)
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to load embassy details');
+        return response.json();
+      })
+      .then(data => setMission(data))
+      .catch(error => console.error('Embassy details API error:', error))
+      .finally(() => setLoading(false));
+  }, [resolvedParams.id]);
+
+  if (loading) {
+    return <div style={{ padding: 40, textAlign: 'center', color: C.ink3 }}>Loading embassy details...</div>;
   }
 
+  if (!mission) notFound();
+
+  const mapQuery = encodeURIComponent(`${mission.name} ${mission.address}`);
+  const websiteUrl = mission.website.startsWith('http') ? mission.website : `https://${mission.website}`;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 800, margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24, width: '100%' }}>
       
       {/* Top Nav */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -62,7 +80,7 @@ export default function EmbassyDetailsPage({ params }: { params: Promise<{ id: s
         <div style={{ display: 'flex', gap: 12, marginTop: 32, position: 'relative', zIndex: 1 }}>
           <Btn kind="outline" style={{ flex: 1, background: '#fff', color: '#1A3673', borderColor: '#fff' }} iconL="phone" onClick={() => window.open(`tel:${mission.telephone}`, '_self')}>Call</Btn>
           <Btn kind="outline" style={{ flex: 1, color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} iconL="map" onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(mission.name + ' ' + mission.address)}`, '_blank')}>Directions</Btn>
-          <button style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={() => window.open(`https://${mission.website}`, '_blank', 'noopener,noreferrer')}>
+          <button style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={() => window.open(websiteUrl, '_blank', 'noopener,noreferrer')}>
             <Icon name="globe" size={20} color="#fff" />
           </button>
         </div>
@@ -86,31 +104,25 @@ export default function EmbassyDetailsPage({ params }: { params: Promise<{ id: s
         </div>
       </Card>
 
-      {/* Working Hours */}
-      <Card pad={24}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, fontSize: 16, fontWeight: 700, color: C.ink, fontFamily: F.display }}>
-          <Icon name="clock" size={20} color={C.ink2} /> Working Hours
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px dashed ${C.line}`, paddingBottom: 12 }}>
-            <span style={{ color: C.ink2, fontWeight: 500 }}>Submission</span>
-            <span style={{ fontWeight: 600, color: C.ink }}>{mission.schedule.submission}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px dashed ${C.line}`, paddingBottom: 12 }}>
-            <span style={{ color: C.ink2, fontWeight: 500 }}>Collection</span>
-            <span style={{ fontWeight: 600, color: C.ink }}>{mission.schedule.collection}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px dashed ${C.line}`, paddingBottom: 12 }}>
-            <span style={{ color: C.ink2, fontWeight: 500 }}>Saturday & Sunday</span>
-            <span style={{ fontWeight: 600, color: C.brick }}>{mission.schedule.weekend}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: C.ink2, fontWeight: 500 }}>Public Holidays</span>
-            <span style={{ fontWeight: 600, color: C.ink }}>{mission.schedule.holidays}</span>
-          </div>
-        </div>
+      {/* Location Map */}
+      <Card pad={0} style={{ overflow: 'hidden', position: 'relative', minHeight: 260 }}>
+        <iframe
+          title={`${mission.name} map`}
+          src={`https://www.google.com/maps?q=${mapQuery}&output=embed`}
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          style={{ width: '100%', height: 300, border: 0, display: 'block' }}
+        />
+        <Btn
+          kind="dark"
+          size="sm"
+          iconL="pin"
+          style={{ position: 'absolute', left: '50%', bottom: 18, transform: 'translateX(-50%)', whiteSpace: 'nowrap' }}
+          onClick={() => window.open(`https://maps.google.com/?q=${mapQuery}`, '_blank')}
+        >
+          View on map
+        </Btn>
       </Card>
-
       {/* Services Offered */}
       <Card pad={24}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, fontSize: 16, fontWeight: 700, color: C.ink, fontFamily: F.display }}>

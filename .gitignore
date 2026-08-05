@@ -43,3 +43,6 @@ next-env.d.ts
 # career simulator
 career_simulator/
 
+# packages
+package-lock.json
+

@@ -79,13 +79,20 @@ export async function getAuthToken(): Promise<string> {
  * @param modelName The iDempiere table name (e.g., 'MCS_Jobs')
  * @param filter Optional OData filter string (e.g., "IsActive eq 'Y'")
  */
-export async function fetchModel(modelName: string, filter?: string) {
+export async function fetchModel(
+  modelName: string,
+  filter?: string,
+  options?: { top?: number; skip?: number; orderby?: string }
+) {
   const token = await getAuthToken();
   
   let url = `${API_URL}/models/${modelName}`;
-  if (filter) {
-    url += `?$filter=${encodeURIComponent(filter)}`;
-  }
+  const query = new URLSearchParams();
+  if (filter) query.set('$filter', filter);
+  if (options?.top) query.set('$top', options.top.toString());
+  if (options?.skip) query.set('$skip', options.skip.toString());
+  if (options?.orderby) query.set('$orderby', options.orderby);
+  if (query.size > 0) url += `?${query.toString()}`;
 
   console.log(`🌐 Fetching ${url}`);
 
