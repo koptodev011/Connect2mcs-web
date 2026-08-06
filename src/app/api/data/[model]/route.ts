@@ -89,7 +89,8 @@ export async function GET(
       }
 
       case 'jobs':
-        const rawJobs = await fetchModel('MCS_Jobs', undefined, {
+        const featuredOnly = searchParams.get('featured') === 'true';
+        const rawJobs = await fetchModel('MCS_Jobs', featuredOnly ? 'MCS_IsFeatured eq true' : undefined, {
           top: sourcePageSize,
           skip: sourceSkipRecords,
           orderby: 'Updated desc',
@@ -129,6 +130,8 @@ export async function GET(
             currency: record.C_Currency_ID?.identifier || '',
             education: record.GS_EducationalQualitifaction?.identifier || '',
             additionalEdu: record.VH_AdditionalEduQual || '',
+            applyUrl: record.MCS_ApplyURL || '',
+            featured: record.MCS_IsFeatured === true,
           };
         });
         break;
@@ -660,9 +663,15 @@ export async function GET(
             marathi: user.MCS_MarathiName || user.Name,
             role: user.MCS_Role || 'Member',
             city: user.C_Location_ID?.identifier || 'Unknown City',
-            country: user.C_Country_ID?.identifier || 'Unknown Country',
+            country: user.C_Country_ID?.identifier || '',
+            countryId: user.C_Country_ID?.id != null ? String(user.C_Country_ID.id) : '',
             origin: user.MCS_OriginalyFrom_ID?.identifier || 'Maharashtra',
-            type: user.MCS_LoginType || 'Standard',
+            type: typeof user.MCS_LoginType === 'object'
+              ? (user.MCS_LoginType?.identifier || user.MCS_LoginType?.id || 'Standard')
+              : (user.MCS_LoginType || 'Standard'),
+            loginTypeId: typeof user.MCS_LoginType === 'object'
+              ? String(user.MCS_LoginType?.id || '')
+              : String(user.MCS_LoginType || ''),
             mandal: user.MCS_Mandals_ID?.identifier || 'Unknown Mandal',
             joined: user.Created ? new Date(user.Created).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Recently',
             bio: user.Description || 'Active community member.',

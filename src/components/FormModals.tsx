@@ -11,35 +11,54 @@ import { doc, setDoc } from 'firebase/firestore';
 // ── Post a Job Modal ──────────────────────────────────────────────────────────
 export function PostJobModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const toast = useGlobalToast();
-  const [form, setForm] = useState({ role: '', company: '', location: '', type: 'Full-time', pay: '', exp: '', desc: '', email: '' });
-  const set = (k: keyof typeof form) => (v: string) => setForm(f => ({ ...f, [k]: v }));
+  const [form, setForm] = useState({ name: '', description: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const set = (key: keyof typeof form) => (value: string) =>
+    setForm(current => ({ ...current, [key]: value }));
 
-  function submit() {
-    if (!form.role || !form.company) { toast.add('Please fill in role and company', 'error'); return; }
-    toast.add('Job posted successfully! It will be reviewed within 24h.', 'success');
-    onClose();
-    setForm({ role: '', company: '', location: '', type: 'Full-time', pay: '', exp: '', desc: '', email: '' });
+  async function submit() {
+    if (!form.name.trim() || !form.description.trim()) {
+      toast.add('Please fill in name and description', 'error');
+      return;
+    }
+
+    const token = localStorage.getItem('mcs_token');
+    if (!token) {
+      toast.add('Please log in to post a job', 'error');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await fetch('/api/jobs/post', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(form),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Could not post job');
+
+      toast.add('Job posted successfully!', 'success');
+      setForm({ name: '', description: '' });
+      onClose();
+    } catch (error) {
+      toast.add(error instanceof Error ? error.message : 'Could not post job', 'error');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Post a Job" marathi="नोकरी जाहीर करा" width={560}>
-      <Field label="Job title / Role" value={form.role} onChange={set('role')} placeholder="Senior Software Engineer"/>
-      <Field label="Company name" value={form.company} onChange={set('company')} placeholder="Infosys, TCS, your startup…"/>
-      <Field label="Location" value={form.location} onChange={set('location')} placeholder="Boston, MA or Remote"/>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <label style={{ display: 'block', marginBottom: 16 }}>
-          <div style={{ fontSize: 11.5, color: C.ink3, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>Job type</div>
-          <select value={form.type} onChange={e => set('type')(e.target.value)} style={{ width: '100%', padding: '10px 14px', border: `1px solid ${C.lineMid}`, borderRadius: 10, fontSize: 14, fontFamily: 'inherit', background: '#fff', outline: 'none' }}>
-            {['Full-time', 'Part-time', 'Contract', 'Internship', 'Volunteer'].map(t => <option key={t}>{t}</option>)}
-          </select>
-        </label>
-        <Field label="Pay range" value={form.pay} onChange={set('pay')} placeholder="$80K–$120K or ₹15–20 LPA"/>
-      </div>
-      <Field label="Experience required" value={form.exp} onChange={set('exp')} placeholder="3–5 years, freshers OK…"/>
-      <Field label="Job description" value={form.desc} onChange={set('desc')} multiline placeholder="What does this role involve? Who are you looking for?"/>
-      <Field label="Contact email" value={form.email} onChange={set('email')} type="email" placeholder="hr@company.com"/>
+    <Modal isOpen={isOpen} onClose={onClose} title="Post a Job" width={520}>
+      <Field label="Name" value={form.name} onChange={set('name')} placeholder="Job post name"/>
+      <Field label="Description" value={form.description} onChange={set('description')} multiline placeholder="Describe the job opportunity..."/>
       <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-        <Btn kind="primary" size="md" full onClick={submit}>Post job listing</Btn>
+        <Btn kind="primary" size="md" full onClick={submit}>
+          {submitting ? 'Posting...' : 'Post job'}
+        </Btn>
         <Btn kind="ghost" size="md" onClick={onClose}>Cancel</Btn>
       </div>
     </Modal>

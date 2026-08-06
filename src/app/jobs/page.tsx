@@ -11,19 +11,45 @@ import { PostJobModal } from '@/components/FormModals';
 
 const PAGE_SIZE = 10;
 
-const cats = ['All', 'Tech', 'Design', 'Editorial', 'Operations', 'Volunteer'];
+const cats = ['All', 'Contract', 'Full-time', 'Part-time', 'Volunteer'];
 const locs = ['Anywhere', 'India', 'USA', 'UK', 'Remote'];
 
 export default function JobsPage() {
   const [jobsData, setJobsData] = useState<Job[]>([]);
+  const [jobStats, setJobStats] = useState({
+    liveJobs: 0,
+    countries: 0,
+    applications: 0,
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
   const [activeId, setActiveId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [postJobOpen, setPostJobOpen] = useState(false);
+  const [featuredJobs, setFeaturedJobs] = useState<Job[]>([]);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
+  const [showAllFeatured, setShowAllFeatured] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef(false);
   const router = useRouter();
+
+  useEffect(() => {
+    fetch('/api/jobs/stats')
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to load jobs statistics');
+        return response.json();
+      })
+      .then(data => {
+        setJobStats({
+          liveJobs: Number(data.liveJobs) || 0,
+          countries: Number(data.countries) || 0,
+          applications: Number(data.applications) || 0,
+        });
+      })
+      .catch(error => console.error('Jobs statistics error:', error))
+      .finally(() => setStatsLoading(false));
+  }, []);
 
   useEffect(() => {
     fetch(`/api/data/jobs?top=${PAGE_SIZE}&skip=0`)
@@ -38,6 +64,30 @@ export default function JobsPage() {
       })
       .catch(console.error);
   }, []);
+
+  useEffect(() => {
+    fetch('/api/data/jobs?featured=true&top=5&skip=0')
+      .then(response => response.ok ? response.json() : [])
+      .then(data => setFeaturedJobs(Array.isArray(data) ? data : []))
+      .catch(error => console.error('Featured jobs loading error:', error))
+      .finally(() => setFeaturedLoading(false));
+  }, []);
+
+  const viewAllFeatured = async () => {
+    try {
+      setFeaturedLoading(true);
+      const response = await fetch('/api/data/jobs?featured=true&top=50&skip=0');
+      if (!response.ok) throw new Error('Failed to load featured jobs');
+      const data = await response.json();
+      setFeaturedJobs(Array.isArray(data) ? data : []);
+      setShowAllFeatured(true);
+    } catch (error) {
+      console.error('Featured jobs loading error:', error);
+      globalToast.add('Could not load featured opportunities', 'error');
+    } finally {
+      setFeaturedLoading(false);
+    }
+  };
 
   const loadMoreJobs = useCallback(async (skip: number) => {
     if (loadingRef.current) return;
@@ -82,7 +132,7 @@ export default function JobsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   
   const filtered = jobsData.filter(j => {
-    const matchCat = activeCat === 'All' || j.cat === activeCat;
+    const matchCat = activeCat === 'All' || j.type.toLowerCase() === activeCat.toLowerCase();
     const matchLoc = activeLoc === 'Anywhere' || j.loc.toLowerCase().includes(activeLoc.toLowerCase());
     const matchQ = !searchQuery || 
       j.role.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -106,6 +156,34 @@ export default function JobsPage() {
   const [applied, setApplied] = useState<Set<string>>(new Set());
   const [saved,   setSaved]   = useState<Set<string>>(new Set());
   const globalToast = useGlobalToast();
+  useEffect(() => {
+    let cancelled = false;
+
+    try {
+      const savedUser = localStorage.getItem('mcs_user');
+      const token = localStorage.getItem('mcs_token');
+      const user = savedUser ? JSON.parse(savedUser) : null;
+      if (!user || user.isGuest || !token) return;
+
+      fetch('/api/jobs/apply', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(response => response.ok ? response.json() : { jobIds: [] })
+        .then(result => {
+          if (!cancelled && Array.isArray(result.jobIds)) {
+            setApplied(new Set(result.jobIds.map(String)));
+          }
+        })
+        .catch(error => console.error('Applied jobs loading error:', error));
+    } catch {
+      // Invalid local session is handled when Apply is clicked.
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
 
   const toggle = (set: Set<string>, setter: (s: Set<string>) => void, id: string, isApply: boolean) => {
     const n = new Set(set);
@@ -118,6 +196,84 @@ export default function JobsPage() {
     }
     setter(n);
   };
+  const handlePostJob = async () => {
+    try {
+      const savedUser = localStorage.getItem('mcs_user');
+      const user = savedUser ? JSON.parse(savedUser) : null;
+      if (!user || user.isGuest) {
+        router.push('/login');
+        return;
+      }
+
+      const response = await fetch(`/api/data/profile?username=${encodeURIComponent(user.name || user.email || '')}`);
+      const profiles = response.ok ? await response.json() : [];
+      const profile = Array.isArray(profiles) ? profiles[0] : null;
+      const loginTypeValue = profile?.loginTypeId || profile?.type;
+      const loginType = typeof loginTypeValue === 'object'
+        ? String(loginTypeValue.id || loginTypeValue.identifier || '')
+        : String(loginTypeValue || '');
+
+      if (!['E', 'J'].includes(loginType.toUpperCase())) {
+        globalToast.add('Only employers and job posters can post a job', 'error');
+        return;
+      }
+
+      setPostJobOpen(true);
+    } catch {
+      globalToast.add('Could not verify job posting permission', 'error');
+    }
+  };
+
+  const handleApply = async (job: Job) => {
+    let user: { name?: string; email?: string; isGuest?: boolean } | null = null;
+    try {
+      const savedUser = localStorage.getItem('mcs_user');
+      user = savedUser ? JSON.parse(savedUser) : null;
+      if (!user || user.isGuest) {
+        router.push('/login');
+        return;
+      }
+    } catch {
+      router.push('/login');
+      return;
+    }
+
+    if (applied.has(job.id)) {
+      globalToast.add('Application already sent', 'info');
+      return;
+    }
+
+    if (job.applyUrl) {
+      try {
+        const applyUrl = new URL(job.applyUrl, window.location.origin);
+        if (!['http:', 'https:'].includes(applyUrl.protocol)) throw new Error();
+        window.location.assign(applyUrl.toString());
+        return;
+      } catch {
+        globalToast.add('Invalid job application URL', 'error');
+        return;
+      }
+    }
+
+    try {
+      const response = await fetch('/api/jobs/apply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('mcs_token') || ''}`,
+        },
+        body: JSON.stringify({ jobId: job.id }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Could not submit job application');
+
+      setApplied(current => new Set(current).add(job.id));
+      globalToast.add('Application sent successfully!', 'success');
+    } catch (error) {
+      globalToast.add(error instanceof Error ? error.message : 'Could not submit job application', 'error');
+    }
+  };
+
   const isApplied = applied.has(j?.id);
   const isSaved   = saved.has(j?.id);
 
@@ -128,11 +284,29 @@ export default function JobsPage() {
         marathi="नौकरी"
         subtitle={`${loading ? '...' : jobsData.length} open roles · curated for the Marathi diaspora · includes B2B partner roles`}
         actions={<>
-          <Btn kind="ghost" size="md" iconL="spark" onClick={() => router.push('/career-simulator')}>Career quiz</Btn>
+          {/* <Btn kind="ghost" size="md" iconL="spark" onClick={() => router.push('/career-simulator')}>Career quiz</Btn> */}
           <Btn kind="ghost" size="md" iconL="news" onClick={() => globalToast.add('Resume builder launching Q3 2026 — stay tuned!', 'info')}>Resume builder</Btn>
-          <Btn kind="dark" size="md" iconL="plus" onClick={() => setPostJobOpen(true)}>Post a job</Btn>
+          <Btn kind="dark" size="md" iconL="plus" onClick={handlePostJob}>Post a job</Btn>
         </>}
       />
+
+      {/* Jobs statistics */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+        {([
+          ['Live Jobs', jobStats.liveJobs, C.saffron, C.saffronLt],
+          ['Countries', jobStats.countries, C.blue, '#DCE5F4'],
+          ['Applications', jobStats.applications, C.green, C.greenLt],
+        ] as const).map(([label, value, color, background]) => (
+          <Card key={label} pad={16} style={{ background, borderColor: `${color}30` }}>
+            <div className="num" style={{ fontFamily: F.display, fontSize: 27, lineHeight: 1, fontWeight: 700, color }}>
+              {statsLoading ? '...' : value.toLocaleString()}
+            </div>
+            <div style={{ marginTop: 6, fontSize: 11, fontWeight: 700, color: C.ink3, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              {label}
+            </div>
+          </Card>
+        ))}
+      </div>
 
       {/* Filter row */}
       <Card pad={14} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -145,9 +319,9 @@ export default function JobsPage() {
             style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: 13.5, fontWeight: 500, fontFamily: 'inherit' }}
           />
         </div>
-        <select value={activeLoc} onChange={e => setActiveLoc(e.target.value)} style={{ padding: '9px 12px', border: `1px solid ${C.lineMid}`, borderRadius: 10, background: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'inherit' }}>
+        {/* <select value={activeLoc} onChange={e => setActiveLoc(e.target.value)} style={{ padding: '9px 12px', border: `1px solid ${C.lineMid}`, borderRadius: 10, background: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'inherit' }}>
           {locs.map(l => <option key={l}>{l}</option>)}
-        </select>
+        </select> */}
         <select value={activeExp} onChange={e => setActiveExp(e.target.value)} style={{ padding: '9px 12px', border: `1px solid ${C.lineMid}`, borderRadius: 10, background: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'inherit' }}>
           <option>Any experience</option><option>0–2y</option><option>3–5y</option><option>6+y</option>
         </select>
@@ -157,6 +331,56 @@ export default function JobsPage() {
       <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
         {cats.map(c => <Pill key={c} active={activeCat === c} onClick={() => setActiveCat(c)}>{c}</Pill>)}
       </div>
+
+      {/* Featured Opportunities */}
+      <section>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+          <div>
+            <h2 style={{ margin: 0, fontFamily: F.display, fontSize: 21, fontWeight: 600, color: C.ink }}>Featured Opportunities</h2>
+            <div style={{ marginTop: 3, fontSize: 12.5, color: C.ink3, fontWeight: 500 }}>Handpicked for NRIs</div>
+          </div>
+          {!showAllFeatured && featuredJobs.length === 5 && (
+            <Btn kind="ghost" size="sm" onClick={viewAllFeatured}>View all</Btn>
+          )}
+        </div>
+
+        {featuredLoading && featuredJobs.length === 0 ? (
+          <Card style={{ textAlign: 'center', color: C.ink3, fontSize: 13 }}>Loading featured opportunities...</Card>
+        ) : featuredJobs.length === 0 ? (
+          <Card style={{ textAlign: 'center', color: C.ink3, fontSize: 13 }}>No featured opportunities available.</Card>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(205px, 240px))', gap: 12, justifyContent: 'start' }}>
+            {featuredJobs.map(job => {
+              const jobApplied = applied.has(job.id);
+              return (
+                <Card key={job.id} pad={14} style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 230, borderTop: `3px solid ${toneColor[job.tone]}` }}>
+                  <div style={{ display: 'flex', gap: 11, alignItems: 'flex-start' }}>
+                    <div style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 10, background: toneBg[job.tone], color: toneColor[job.tone], display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: F.display, fontSize: 17, fontWeight: 700 }}>
+                      {job.logo}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, lineHeight: 1.3 }}>{job.role}</div>
+                      <div style={{ marginTop: 3, fontSize: 12, color: C.ink3, fontWeight: 600 }}>{job.co}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <Tag color={C.ink2} bg={C.bgDeep}>{job.loc}</Tag>
+                    <Tag color={C.ink2} bg={C.bgDeep}>{job.pay}</Tag>
+                    <Tag color={C.ink2} bg={C.bgDeep}>{job.type}</Tag>
+                    <Tag color={C.ink3} bg={C.bgDeep}>Posted {job.posted}</Tag>
+                    <Tag color={C.saffronDk} bg={C.saffronLt}>Featured</Tag>
+                  </div>
+                  <div style={{ marginTop: 'auto' }}>
+                    <Btn kind={jobApplied ? 'soft' : 'primary'} size="sm" full onClick={() => handleApply(job)}>
+                      {jobApplied ? 'Application sent' : 'Apply now'}
+                    </Btn>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       {/* List + detail */}
       {j ? (
@@ -253,31 +477,31 @@ export default function JobsPage() {
                 ))}
               </div>
 
-              <h4 style={{ margin: '20px 0 8px', fontSize: 12, fontWeight: 700, color: C.ink3, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Why through Connect2MCS</h4>
+              {/* <h4 style={{ margin: '20px 0 8px', fontSize: 12, fontWeight: 700, color: C.ink3, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Why through Connect2MCS</h4>
               <div style={{ background: C.greenLt, borderRadius: 10, padding: '12px 14px', display: 'flex', gap: 10 }}>
                 <Icon name="verify" size={20} color={C.green}/>
                 <div style={{ fontSize: 12.5, color: C.ink2, fontWeight: 600, lineHeight: 1.5 }}>
                   <strong>3 community members work here.</strong> Anuja Karandikar (BMM Pune) is a current employee and willing to refer.
                 </div>
-              </div>
+              </div> */}
 
               <div style={{ display: 'flex', gap: 8, marginTop: 22 }}>
                 <Btn
                   kind={isApplied ? 'soft' : 'primary'}
                   size="lg"
                   full
-                  onClick={() => toggle(applied, setApplied, j.id, true)}
+                  onClick={() => handleApply(j)}
                 >
                   {isApplied ? 'Application sent ✓' : 'Apply with Connect2MCS'}
                 </Btn>
-                <Btn
+                {/* <Btn
                   kind={isSaved ? 'soft' : 'outline'}
                   size="lg"
                   onClick={() => toggle(saved, setSaved, j.id, false)}
                 >
                   <Icon name="heart" size={18} color={isSaved ? C.brick : C.ink}/>
                 </Btn>
-                <Btn kind="outline" size="lg" onClick={() => { if (navigator.share) navigator.share({ title: j.role, text: `${j.role} at ${j.co}`, url: window.location.href }); else { navigator.clipboard.writeText(window.location.href); globalToast.add('Link copied!', 'success'); } }}><Icon name="share" size={18}/></Btn>
+                <Btn kind="outline" size="lg" onClick={() => { if (navigator.share) navigator.share({ title: j.role, text: `${j.role} at ${j.co}`, url: window.location.href }); else { navigator.clipboard.writeText(window.location.href); globalToast.add('Link copied!', 'success'); } }}><Icon name="share" size={18}/></Btn> */}
               </div>
               <div style={{ textAlign: 'center', marginTop: 10, fontSize: 11.5, color: C.ink3, fontWeight: 500 }}>
                 {isApplied

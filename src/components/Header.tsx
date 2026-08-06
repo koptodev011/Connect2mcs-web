@@ -51,7 +51,7 @@ export default function Header() {
   const searchRef = useRef<HTMLInputElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
-  const [currentUser, setCurrentUser] = useState<{ name: string; city?: string; country?: string; avatar?: string; isGuest?: boolean } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ name: string; city?: string; country?: string; countryId?: string; avatar?: string; isGuest?: boolean } | null>(null);
 
   useEffect(() => {
     fetch('/api/data/countries')
@@ -66,17 +66,9 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
-    const inferCountry = (city?: string) => {
-      const value = (city || '').toLowerCase();
-      if (/mumbai|pune|india/.test(value)) return 'India';
-      if (/london|united kingdom|\buk\b/.test(value)) return 'United Kingdom';
-      if (/boston|new york|united states|\busa\b/.test(value)) return 'United States';
-      return 'All';
-    };
-
-    function loadUser(forceUserCountry = false) {
+    async function loadUser(forceUserCountry = false) {
       const saved = localStorage.getItem('mcs_user');
-      let user: { name: string; city?: string; country?: string; avatar?: string; isGuest?: boolean } | null = null;
+      let user: { name: string; city?: string; country?: string; countryId?: string; avatar?: string; isGuest?: boolean } | null = null;
       if (saved) {
         try { user = JSON.parse(saved); } catch { user = null; }
       }
@@ -87,15 +79,37 @@ export default function Header() {
         return;
       }
 
+      let country = user.country || '';
+      let countryId = user.countryId || '';
+      try {
+        const response = await fetch(`/api/data/profile?username=${encodeURIComponent(user.name)}`);
+        const profiles = response.ok ? await response.json() : [];
+        const profile = Array.isArray(profiles) ? profiles[0] : null;
+        if (profile) {
+          country = String(profile.country || '');
+          countryId = String(profile.countryId || '');
+          const updatedUser = { ...user, country, countryId };
+          localStorage.setItem('mcs_user', JSON.stringify(updatedUser));
+          setCurrentUser(updatedUser);
+        }
+      } catch (error) {
+        console.error('User country loading error:', error);
+      }
+
+      if (!countryId) {
+        setLocation({ city: 'All', country: 'All' });
+        return;
+      }
+
       const hasSavedSelection = Boolean(localStorage.getItem('mcs_location'));
       if (forceUserCountry || !hasSavedSelection) {
-        const userCountry = user.country || inferCountry(user.city);
-        setLocation({ city: userCountry, country: userCountry });
+        const selectedCountry = country || 'All';
+        setLocation({ city: selectedCountry, country: selectedCountry });
       }
     }
 
-    const handleAuthChange = () => loadUser(true);
-    loadUser(false);
+    const handleAuthChange = () => { void loadUser(true); };
+    void loadUser(false);
     window.addEventListener('mcs_auth_change', handleAuthChange);
     return () => window.removeEventListener('mcs_auth_change', handleAuthChange);
   }, [setLocation]);

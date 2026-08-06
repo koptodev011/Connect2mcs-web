@@ -20,6 +20,8 @@ export interface Job {
   detail?: string;
   education?: string;
   additionalEdu?: string;
+  applyUrl?: string;
+  featured?: boolean;
 }
 
 export const jobs: Job[] = [
