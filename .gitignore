@@ -46,3 +46,5 @@ career_simulator/
 # packages
 package-lock.json
 
+# public
+public/*

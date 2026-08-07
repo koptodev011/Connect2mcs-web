@@ -262,3 +262,21 @@ button, input, select, textarea {
   .mob-h1  { font-size: 30px !important; letter-spacing: -0.025em !important; }
   .mob-sub { font-size: 14px !important; max-width: 100% !important; }
 }
+
+/* Event category horizontal scroller */
+.event-category-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 14, 12, 0.28) transparent;
+  overscroll-behavior-x: contain;
+}
+.event-category-scroll::-webkit-scrollbar {
+  display: block;
+  height: 6px;
+}
+.event-category-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.event-category-scroll::-webkit-scrollbar-thumb {
+  background: rgba(15, 14, 12, 0.28);
+  border-radius: 999px;
+}

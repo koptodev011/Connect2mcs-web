@@ -11,10 +11,11 @@ import { HostEventModal } from '@/components/FormModals';
 import { FullCalendarModal } from '@/components/FullCalendarModal';
 import { useGlobalToast } from '@/components/primitives';
 
-const cats = ['All', 'Festival', 'Cultural', 'Music', 'Literary', 'Workshops', 'Family'];
+const fallbackCats = ['All'];
 
 export default function EventsPage() {
   const [eventsData, setEventsData] = useState<CalendarEvent[]>([]);
+  const [cats, setCats] = useState<string[]>(fallbackCats);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
@@ -23,6 +24,25 @@ export default function EventsPage() {
       .then(data => {
         setEventsData(data);
         setLoading(false);
+      })
+      .catch(console.error);
+
+    fetch('/api/v1/models/MCS_Event_Category')
+      .then(res => res.ok ? res.json() : Promise.reject(new Error('Failed to load event categories')))
+      .then((payload: unknown) => {
+        const records = Array.isArray(payload)
+          ? payload
+          : (payload && typeof payload === 'object' && 'records' in payload
+            ? (payload as { records?: unknown[] }).records || []
+            : []);
+        const categoryNames = records
+          .filter((record): record is Record<string, unknown> =>
+            !!record && typeof record === 'object' && record.IsActive !== false
+          )
+          .map(record => String(record.Name || record.Value || '').trim())
+          .filter(Boolean);
+
+        if (categoryNames.length) setCats(['All', ...Array.from(new Set(categoryNames))]);
       })
       .catch(console.error);
   }, []);
@@ -68,52 +88,11 @@ export default function EventsPage() {
         marathi="उत्सव"
         subtitle={`${loading ? '...' : eventsData.length} events worldwide · 12 near you this weekend`}
         actions={<>
-          <Btn kind="ghost" size="md" iconL="cal" onClick={() => setCalendarOpen(true)}>May 2026</Btn>
-          <Btn kind="dark" size="md" iconL="plus" onClick={() => setHostEventOpen(true)}>Host event</Btn>
         </>}
       />
 
       {/* Featured banner */}
-      <div className="mob-stack" style={{
-        background: 'linear-gradient(110deg, #5C1F12 0%, #A8321F 60%, #E26A1F 100%)',
-        borderRadius: 18, padding: '32px 36px', color: '#fff', position: 'relative', overflow: 'hidden',
-        display: 'grid', gridTemplateColumns: '1fr 280px', gap: 32, alignItems: 'center',
-      }}>
-        <div>
-          <Tag color="#FFD89C" bg="rgba(255,216,156,0.18)">Featured · This weekend</Tag>
-          <h2 style={{ margin: '12px 0 8px', fontFamily: F.display, fontSize: 36, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.1 }}>Marathi Food Festival 2026</h2>
-          <p style={{ margin: 0, fontSize: 15, color: 'rgba(255,255,255,0.8)', fontWeight: 500, maxWidth: 540, lineHeight: 1.55 }}>
-            38 stalls, 6 live cooking sessions, Lavani performances at sunset. Hosted by BMM New Jersey at the Edison Convention Centre.
-          </p>
-          <div style={{ display: 'flex', gap: 22, marginTop: 22, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-            {[['WHEN','Sat 17 May · 11am–9pm'],['WHERE','Edison Convention Centre, NJ'],['TICKETS','$25 · kids free']].map(([k, v], i) => (
-              <div key={i} style={{ display: 'contents' }}>
-                {i > 0 && <div style={{ width: 1, height: 32, background: 'rgba(255,255,255,0.2)' }}/>}
-                <div>
-                  <div style={{ fontSize: 11, color: '#FFD89C', fontWeight: 700, letterSpacing: '0.06em' }}>{k}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, marginTop: 3 }}>{v}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: 10, marginTop: 22, flexWrap: 'wrap' }}>
-            <Btn kind="primary" onClick={() => window.open('https://www.eventbrite.com', '_blank', 'noopener,noreferrer')}>Get tickets</Btn>
-            <Btn kind="ghost" style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }} onClick={() => addToCalendar('Marathi Food Festival 2026', '2026-05-17', 'Edison Convention Centre, NJ')}>Add to calendar</Btn>
-          </div>
-        </div>
-        <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 14, padding: '20px 22px', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.15)' }}>
-          <div style={{ fontSize: 11, color: '#FFD89C', fontWeight: 700, letterSpacing: '0.08em' }}>COUNTDOWN</div>
-          <div style={{ display: 'flex', gap: 12, marginTop: 10 }}>
-            {[['06','D'],['14','H'],['28','M']].map(([n, l], i) => (
-              <div key={i} style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 10, padding: '12px 16px', textAlign: 'center', flex: 1 }}>
-                <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', fontFamily: F.display }}>{n}</div>
-                <div style={{ fontSize: 10, color: '#FFD89C', fontWeight: 700, marginTop: 2 }}>{l}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ marginTop: 14, fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: 600, textAlign: 'center' }}>412 going · 38 from your network</div>
-        </div>
-      </div>
+      
 
       <Card pad={14} style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 'min(100%, 200px)', display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', background: C.bgDeep, borderRadius: 10 }}>
@@ -127,8 +106,18 @@ export default function EventsPage() {
         </div>
       </Card>
 
-      <div style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
-        {cats.map(c => <Pill key={c} active={activeCat === c} onClick={() => setActiveCat(c)}>{c}</Pill>)}
+      <div className="event-category-scroll" style={{
+          display: 'flex',
+          gap: 6,
+          width: '100%',
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          flexWrap: 'nowrap',
+          paddingBottom: 6,
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
+        {cats.map(c => <Pill key={c} style={{ flex: '0 0 auto' }} active={activeCat === c} onClick={() => setActiveCat(c)}>{c}</Pill>)}
       </div>
 
       {/* Calendar strip */}
