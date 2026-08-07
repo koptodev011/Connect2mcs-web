@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -14,6 +14,7 @@ export const navGroups = [
       { href: '/community',  label: 'Community',  icon: 'people' as const },
       { href: '/events',     label: 'Events',     icon: 'cal'    as const },
       { href: '/culture',    label: 'Culture',    icon: 'lamp'   as const },
+      { href: '/aarti',      label: 'Aarti',      icon: 'lamp'   as const },
     ]
   },
   {

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { signFavoriteUser } from '@/lib/favorite-session';
 
 const API_URL = process.env.IDEMPIERE_API_URL || 'http://15.207.222.86:8080/api/v1';
 
@@ -52,15 +53,17 @@ export async function POST(request: Request) {
           .toUpperCase()
           .slice(0, 2) || 'U';
 
-        return NextResponse.json({
-          success: true,
-          token: data.token,
-          user: {
-            name: username,
-            city: 'Mumbai',
-            avatar: initials
-          }
-        });
+        const escapedUsername = String(username).replace(/'/g, "''");
+        const filters = [`Name eq '${escapedUsername}'`, `Value eq '${escapedUsername}'`, `EMail eq '${escapedUsername}'`];
+        let erpUser: { id?: number | string } | null = null;
+        for (const filter of filters) {
+          const userResponse = await fetch(`${API_URL}/models/AD_User?$filter=${encodeURIComponent(filter)}&$top=1`, { headers: { Authorization: `Bearer ${data.token}`, Accept: 'application/json' }, cache: 'no-store' });
+          if (userResponse.ok) { const payload = await userResponse.json() as { records?: Array<{ id?: number | string }> }; erpUser = payload.records?.[0] || null; if (erpUser) break; }
+        }
+        const userId = Number(erpUser?.id) || null;
+        const loginResponse = NextResponse.json({ success: true, token: data.token, user: { id: userId, name: username, city: 'Mumbai', avatar: initials } });
+        if (userId) loginResponse.cookies.set('mcs_favorite_user', signFavoriteUser(userId), { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 60 * 60 * 24 * 30 });
+        return loginResponse;
       } else {
         const errMsg = await response.text();
         console.warn(`⚠️ iDempiere auth rejected: ${response.status} ${errMsg}`);

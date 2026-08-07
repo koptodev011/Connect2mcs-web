@@ -689,12 +689,15 @@ export async function GET(
           const logoData = record.AD_Image_ID?.data;
           const logoId = record.AD_Image_ID?.id;
           return {
-            title: record.Name,
+            id: Number(record.id),
+            title: record.Name || 'Aarti',
             deity: record.MCS_Aarati_Category_ID?.identifier || 'Deity',
             duration: record.MCS_Duration || '2:00',
             tone: getTone(record.id),
             popular: record.MCS_IsPopular || false,
-            image: logoData ? `data:image/jpeg;base64,${logoData}` : (logoId ? `/api/image/${logoId}` : undefined)
+            image: logoId ? `/api/image/${logoId}` : (logoData ? `data:image/jpeg;base64,${logoData}` : '/assets/arti-list-logo.png'),
+            audio: record.MCS_AudioURL || record.AudioURL || '/assets/dummy-aarti.wav',
+            lyrics: record.Help || ''
           };
         });
         break;
