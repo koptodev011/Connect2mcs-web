@@ -9,6 +9,7 @@ import type { SceneKind } from '@/components/Scenes';
 import { calendarWeek, CalendarEvent } from '@/data/events';
 import { HostEventModal } from '@/components/FormModals';
 import { FullCalendarModal } from '@/components/FullCalendarModal';
+import MarathiCalendarTab from '@/components/MarathiCalendarTab';
 import { useGlobalToast } from '@/components/primitives';
 
 const fallbackCats = ['All'];
@@ -16,6 +17,7 @@ const fallbackCats = ['All'];
 export default function EventsPage() {
   const [eventsData, setEventsData] = useState<CalendarEvent[]>([]);
   const [cats, setCats] = useState<string[]>(fallbackCats);
+  const [activeTab, setActiveTab] = useState<'events' | 'calendar'>('events');
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
@@ -91,6 +93,12 @@ export default function EventsPage() {
         </>}
       />
 
+      <div className="events-view-tabs" role="tablist" aria-label="Events views">
+        <button type="button" role="tab" aria-selected={activeTab === 'events'} className={activeTab === 'events' ? 'active' : ''} onClick={() => setActiveTab('events')}>Events</button>
+        <button type="button" role="tab" aria-selected={activeTab === 'calendar'} className={activeTab === 'calendar' ? 'active' : ''} onClick={() => setActiveTab('calendar')}>Calendar</button>
+      </div>
+
+      <div style={{ display: activeTab === 'events' ? 'contents' : 'none' }}>
       {/* Featured banner */}
       
 
@@ -274,6 +282,8 @@ export default function EventsPage() {
       </div>
       <HostEventModal isOpen={hostEventOpen} onClose={() => setHostEventOpen(false)}/>
       <FullCalendarModal isOpen={calendarOpen} onClose={() => setCalendarOpen(false)}/>
+      </div>
+      {activeTab === 'calendar' && <MarathiCalendarTab />}
     </div>
   );
 }

@@ -280,3 +280,86 @@ button, input, select, textarea {
   background: rgba(15, 14, 12, 0.28);
   border-radius: 999px;
 }
+/* Events and Marathi calendar tabs */
+.events-view-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  max-width: 520px;
+  border-bottom: 1px solid #e7dbcf;
+}
+.events-view-tabs button {
+  position: relative;
+  padding: 11px 16px;
+  border: 0;
+  background: transparent;
+  color: #806f62;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.events-view-tabs button.active { color: #251a13; }
+.events-view-tabs button.active::after {
+  content: '';
+  position: absolute;
+  right: 16px;
+  bottom: -1px;
+  left: 16px;
+  height: 3px;
+  border-radius: 999px;
+  background: #e26a1f;
+}
+.marathi-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+.marathi-month-card {
+  position: relative;
+  min-height: 130px;
+  padding: 18px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border: 1px solid #ead8c8;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 3px 8px rgba(72, 45, 25, .07);
+}
+.marathi-month-card h3 { position: relative; z-index: 1; margin: 0; font-size: 20px; color: #332820; }
+.marathi-month-card p { position: relative; z-index: 1; margin: 4px 0 0; font-size: 12px; color: #a38468; }
+.marathi-month-card > svg { position: relative; z-index: 1; }
+.marathi-month-card > span {
+  position: absolute;
+  right: -22px;
+  bottom: -28px;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  background: #f7f1ea;
+}
+@media (max-width: 640px) {
+  .events-view-tabs { max-width: none; width: 100%; }
+  .marathi-calendar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .marathi-month-card { min-height: 108px; padding: 13px; }
+  .marathi-month-card h3 { font-size: 17px; }
+}
+/* Calendar month image modal */
+.marathi-month-card { cursor: pointer; transition: transform .16s ease, box-shadow .16s ease; }
+.marathi-month-card:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(72, 45, 25, .12); }
+.marathi-month-card:focus-visible { outline: 3px solid rgba(226, 106, 31, .3); outline-offset: 2px; }
+.calendar-month-modal { position: fixed; inset: 0; z-index: 1000; padding: 24px; display: grid; place-items: center; background: rgba(20, 13, 8, .72); backdrop-filter: blur(4px); }
+.calendar-month-dialog { width: min(920px, 100%); max-height: calc(100vh - 48px); display: flex; flex-direction: column; overflow: hidden; border-radius: 16px; background: #fff; box-shadow: 0 24px 70px rgba(0, 0, 0, .3); }
+.calendar-month-dialog-head { padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eadfd6; }
+.calendar-month-dialog-head h3 { margin: 0; font-size: 20px; }
+.calendar-month-dialog-head p { margin: 3px 0 0; color: #8c6d59; font-size: 12px; }
+.calendar-month-dialog-head button { width: 36px; height: 36px; border: 0; border-radius: 50%; background: #f5eee7; color: #332820; font-size: 25px; cursor: pointer; }
+.calendar-month-image-wrap { min-height: 300px; overflow: auto; background: #f7f2ec; }
+.calendar-month-image-wrap img { display: block; width: 100%; height: auto; }
+.calendar-month-message { min-height: 360px; padding: 32px; display: grid; place-items: center; color: #806f62; text-align: center; }
+.calendar-month-message.error { color: #b42318; }
+@media (max-width: 640px) {
+  .calendar-month-modal { padding: 10px; }
+  .calendar-month-dialog { max-height: calc(100vh - 20px); border-radius: 12px; }
+  .calendar-month-dialog-head { padding: 11px 13px; }
+}
