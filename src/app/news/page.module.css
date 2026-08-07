@@ -151,3 +151,14 @@
     padding: 24px;
   }
 }
+.loadMore {
+  min-height: 1px;
+}
+
+.loadingText {
+  margin: 16px 0 0;
+  color: #6b6256;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}

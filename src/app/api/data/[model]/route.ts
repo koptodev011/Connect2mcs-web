@@ -52,6 +52,7 @@ export async function GET(
   const { model } = await params;
   const { searchParams } = new URL(request.url);
   const recordId = searchParams.get('id');
+  const searchQuery = searchParams.get('q')?.trim().toLowerCase() || '';
   const pageSize = Math.min(Math.max(Number(searchParams.get('top')) || 10, 1), 50);
   const skipRecords = Math.max(Number(searchParams.get('skip')) || 0, 0);
   const cookieHeader = request.headers.get('cookie') || '';
@@ -411,7 +412,8 @@ export async function GET(
 
       case 'maids': {
         const rawBookings = await fetchModel('MCS_Maid_Booking', undefined, {
-          top: 100,
+          top: pageSize,
+          skip: skipRecords,
           orderby: 'Updated desc',
         });
 
@@ -546,7 +548,8 @@ export async function GET(
 
       case 'housing': {
         const rawHousing = await fetchModel('MCS_Accommodation', undefined, {
-          top: 100,
+          top: pageSize,
+          skip: skipRecords,
           orderby: 'Updated desc',
         });
         data = rawHousing
@@ -766,6 +769,13 @@ export async function GET(
             image: logoData ? `data:image/jpeg;base64,${logoData}` : (logoId ? `/api/image/${logoId}` : undefined)
           };
         });
+        if (searchQuery) {
+          data = data.filter((paper: any) =>
+            [paper.name, paper.dev, paper.desc, paper.city]
+              .some(value => String(value || '').toLowerCase().includes(searchQuery))
+          );
+        }
+        data = data.slice(skipRecords, skipRecords + pageSize);
         break;
 
       case 'marketplace':
@@ -797,7 +807,8 @@ export async function GET(
 
       case 'housing-requests': {
         const rawReqs = await fetchModel('MCS_Accommodation_Requirements', undefined, {
-          top: 100,
+          top: pageSize,
+          skip: skipRecords,
           orderby: 'Updated desc',
         });
         data = rawReqs
@@ -930,8 +941,60 @@ export async function GET(
           }));
         break;
 
-      case 'news':
-        return NextResponse.json({ error: 'News API is temporarily disabled due to backend primary key issue.' }, { status: 500 });
+      case 'news-categories': {
+        const rawCategories = await fetchModel('MCS_News_Category', undefined, {
+          top: 100,
+          orderby: 'Name asc',
+        });
+        data = rawCategories
+          .filter((record: any) => record.IsActive !== false)
+          .map((record: any) => ({
+            id: String(record.id),
+            name: record.Name || record.Value || '',
+          }))
+          .filter((category: { name: string }) => category.name);
+        break;
+      }
+      case 'news': {
+        const rawNews = await fetchModel('MCS_News', "MCS_NewsType eq 'A'", {
+          top: pageSize,
+          skip: skipRecords,
+          orderby: 'Updated desc',
+        });
+        data = rawNews
+          .filter((record: any) => {
+            const newsType = typeof record.MCS_NewsType === 'object'
+              ? record.MCS_NewsType?.id
+                ?? record.MCS_NewsType?.identifier
+                ?? record.MCS_NewsType?.value
+                ?? record.MCS_NewsType?.Value
+              : record.MCS_NewsType;
+            const normalizedNewsType = String(newsType || '').toUpperCase();
+            return record.IsActive !== false
+              && (normalizedNewsType === 'A' || normalizedNewsType === 'ARTICLE');
+          })
+          .map((record: any) => {
+            const category = typeof record.MCS_News_Category_ID === 'object'
+              ? record.MCS_News_Category_ID?.identifier
+              : record.MCS_News_Category_ID;
+            const author = typeof record.CreatedBy === 'object'
+              ? record.CreatedBy?.identifier
+              : record.CreatedBy;
+            const publishedAt = record.Updated || record.Created;
+            return {
+              id: String(record.id),
+              cat: category || 'Community',
+              tone: getTone(record.id),
+              title: record.Name || record.Value || 'Untitled news story',
+              excerpt: record.Description || record.DetailInfo || '',
+              when: publishedAt ? new Date(publishedAt).toLocaleDateString() : 'Recently',
+              read: record.MCS_ReadTime || record.MCS_ReadingTime || '3 min',
+              author: record.MCS_Author || author || undefined,
+              featured: record.MCS_IsFeatured === true,
+            };
+          });
+        break;
+      }
 
       default:
         if (model.startsWith('raw_')) {
@@ -942,7 +1005,7 @@ export async function GET(
         return NextResponse.json({ error: 'Model mapping not implemented' }, { status: 404 });
     }
 
-    const countryFilteredModels = !['countries', 'profile', 'newspapers'].includes(model);
+    const countryFilteredModels = !['countries', 'profile', 'newspapers', 'news-categories', 'news'].includes(model);
     if (countryFilteredModels && Array.isArray(data) && selectedCountry !== 'All') {
       const normalizeCountry = (value: string) => {
         const normalized = value.toLowerCase().replace(/[^a-z0-9]/g, '');

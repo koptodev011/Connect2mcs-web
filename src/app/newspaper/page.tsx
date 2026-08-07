@@ -1,47 +1,85 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import Icon from '@/components/Icon';
+import { C } from '@/lib/tokens';
 import { Card, ImgPh, SectionHead, PageHeader } from '@/components/primitives';
 import type { NewspaperPaper } from '@/data/newspaper';
 import styles from './page.module.css';
 
+const NEWSPAPER_PAGE_SIZE = 10;
+
 export default function NewspaperPage() {
   const [papersData, setPapersData] = useState<NewspaperPaper[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [paperPage, setPaperPage] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch('/api/data/newspapers')
-      .then(response => response.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setPapersData(data);
-          return;
-        }
+    const timeout = window.setTimeout(() => {
+      setPapersData([]);
+      setPaperPage(0);
+      setHasMore(true);
+      setLoading(true);
+      setDebouncedQuery(searchQuery.trim());
+    }, 300);
 
-        const tones: NewspaperPaper['tone'][] = ['blue', 'brick', 'saffron', 'green', 'gold'];
-        const records = Array.isArray(data?.records) ? data.records : [];
-        setPapersData(records.map((record: Record<string, unknown>, index: number) => {
-          const logo = record.Logo_ID as { data?: string; id?: number } | undefined;
-          const id = String(record.id ?? record.Value ?? index);
-          const name = String(record.Name ?? record.Value ?? 'Paper');
-          return {
-            id,
-            name,
-            dev: String(record.MCS_DevanagariName ?? name),
-            est: Number(record.MCS_Establishment_Year ?? 1900),
-            city: String(record.MCS_CityOfPublication ?? 'Maharashtra'),
-            desc: String(record.Description ?? 'Marathi daily newspaper.'),
-            url: typeof record.URL === 'string' ? record.URL : '#',
-            readers: String(record.MCS_Total_NewsReaders ?? '100K'),
-            tone: tones[index % tones.length],
-            image: logo?.data
-              ? `data:image/jpeg;base64,${logo.data}`
-              : logo?.id ? `/api/image/${logo.id}` : undefined,
-          };
-        }));
+    return () => window.clearTimeout(timeout);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const offset = paperPage * NEWSPAPER_PAGE_SIZE;
+    const query = encodeURIComponent(debouncedQuery);
+
+    fetch(`/api/data/newspapers?top=${NEWSPAPER_PAGE_SIZE}&skip=${offset}&q=${query}`, {
+      signal: controller.signal,
+    })
+      .then(response => {
+        if (!response.ok) throw new Error('Unable to load newspapers');
+        return response.json();
       })
-      .catch(console.error);
-  }, []);
+      .then(data => {
+        const nextPapers: NewspaperPaper[] = Array.isArray(data) ? data : [];
+        setPapersData(current => {
+          if (paperPage === 0) return nextPapers;
+          const existingIds = new Set(current.map(paper => paper.id));
+          return [...current, ...nextPapers.filter(paper => !existingIds.has(paper.id))];
+        });
+        setHasMore(nextPapers.length === NEWSPAPER_PAGE_SIZE);
+      })
+      .catch(error => {
+        if (error instanceof Error && error.name !== 'AbortError') {
+          console.error(error);
+          setHasMore(false);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [paperPage, debouncedQuery]);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target || loading || !hasMore) return;
+
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0]?.isIntersecting) {
+        observer.disconnect();
+        setLoading(true);
+        setPaperPage(current => current + 1);
+      }
+    }, { rootMargin: '240px' });
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [loading, hasMore]);
 
   return (
     <div className={styles.page}>
@@ -51,6 +89,17 @@ export default function NewspaperPage() {
         subtitle="5 major Marathi dailies Â· today's top stories Â· updated every morning"
       />
 
+      <Card pad={14} className={styles.searchCard}>
+        <div className={styles.searchField}>
+          <Icon name="search" size={16} color={C.ink3} />
+          <input
+            className={styles.searchInput}
+            value={searchQuery}
+            onChange={event => setSearchQuery(event.target.value)}
+            placeholder="Search newspapers"
+          />
+        </div>
+      </Card>
       <section>
         <SectionHead title="All Marathi papers" subtitle="Quick stats on Maharashtra's major dailies" />
         <div className={styles.paperGrid}>
@@ -75,6 +124,9 @@ export default function NewspaperPage() {
             </Card>
           ))}
         </div>
+        <div ref={loadMoreRef} className={styles.loadMore} aria-hidden="true" />
+        {loading && <p className={styles.loadingText}>Loading more newspapersâ€¦</p>}
+        {!loading && papersData.length === 0 && <p className={styles.emptyText}>No newspapers found.</p>}
       </section>
     </div>
   );
