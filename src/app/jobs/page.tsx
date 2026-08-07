@@ -8,6 +8,7 @@ import { Btn, Card, Pill, Tag, ImgPh, PageHeader, useGlobalToast } from '@/compo
 import { Job } from '@/data/jobs';
 import { toneBg, toneColor } from '@/lib/tones';
 import { PostJobModal } from '@/components/FormModals';
+import { ResumeBuilderModal } from '@/components/ResumeBuilderModal';
 
 const PAGE_SIZE = 10;
 
@@ -27,6 +28,7 @@ export default function JobsPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [postJobOpen, setPostJobOpen] = useState(false);
+  const [resumeBuilderOpen, setResumeBuilderOpen] = useState(false);
   const [featuredJobs, setFeaturedJobs] = useState<Job[]>([]);
   const [featuredLoading, setFeaturedLoading] = useState(true);
   const [showAllFeatured, setShowAllFeatured] = useState(false);
@@ -284,8 +286,8 @@ export default function JobsPage() {
         marathi="नौकरी"
         subtitle={`${loading ? '...' : jobsData.length} open roles · curated for the Marathi diaspora · includes B2B partner roles`}
         actions={<>
-          {/* <Btn kind="ghost" size="md" iconL="spark" onClick={() => router.push('/career-simulator')}>Career quiz</Btn> */}
-          <Btn kind="ghost" size="md" iconL="news" onClick={() => globalToast.add('Resume builder launching Q3 2026 — stay tuned!', 'info')}>Resume builder</Btn>
+          <Btn kind="ghost" size="md" iconL="spark" onClick={() => router.push('/career-simulator')}>Career Simulator</Btn>
+          <Btn kind="ghost" size="md" iconL="news" onClick={() => setResumeBuilderOpen(true)}>Resume builder</Btn>
           <Btn kind="dark" size="md" iconL="plus" onClick={handlePostJob}>Post a job</Btn>
         </>}
       />
@@ -519,6 +521,7 @@ export default function JobsPage() {
         </Card>
       )}
       <PostJobModal isOpen={postJobOpen} onClose={() => setPostJobOpen(false)}/>
+      <ResumeBuilderModal isOpen={resumeBuilderOpen} onClose={() => setResumeBuilderOpen(false)}/>
     </div>
   );
 }
