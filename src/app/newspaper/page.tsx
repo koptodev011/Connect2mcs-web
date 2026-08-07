@@ -1,57 +1,76 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { C, F } from '@/lib/tokens';
-import Icon from '@/components/Icon';
-import { Btn, Card, Pill, Tag, ImgPh, SectionHead, PageHeader } from '@/components/primitives';
+import Image from 'next/image';
+import { useEffect, useState } from 'react';
+import { Card, ImgPh, SectionHead, PageHeader } from '@/components/primitives';
 import type { NewspaperPaper } from '@/data/newspaper';
+import styles from './page.module.css';
 
 export default function NewspaperPage() {
   const [papersData, setPapersData] = useState<NewspaperPaper[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/data/newspapers')
-      .then(res => res.json())
+      .then(response => response.json())
       .then(data => {
-        setPapersData(data);
+        if (Array.isArray(data)) {
+          setPapersData(data);
+          return;
+        }
 
-        setLoading(false);
+        const tones: NewspaperPaper['tone'][] = ['blue', 'brick', 'saffron', 'green', 'gold'];
+        const records = Array.isArray(data?.records) ? data.records : [];
+        setPapersData(records.map((record: Record<string, unknown>, index: number) => {
+          const logo = record.Logo_ID as { data?: string; id?: number } | undefined;
+          const id = String(record.id ?? record.Value ?? index);
+          const name = String(record.Name ?? record.Value ?? 'Paper');
+          return {
+            id,
+            name,
+            dev: String(record.MCS_DevanagariName ?? name),
+            est: Number(record.MCS_Establishment_Year ?? 1900),
+            city: String(record.MCS_CityOfPublication ?? 'Maharashtra'),
+            desc: String(record.Description ?? 'Marathi daily newspaper.'),
+            url: typeof record.URL === 'string' ? record.URL : '#',
+            readers: String(record.MCS_Total_NewsReaders ?? '100K'),
+            tone: tones[index % tones.length],
+            image: logo?.data
+              ? `data:image/jpeg;base64,${logo.data}`
+              : logo?.id ? `/api/image/${logo.id}` : undefined,
+          };
+        }));
       })
       .catch(console.error);
   }, []);
 
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+    <div className={styles.page}>
       <PageHeader
         title="Marathi Newspaper"
         marathi="वृत्तपत्र"
-        subtitle="5 major Marathi dailies · today's top stories · updated every morning"
-        actions={<>
-          <Btn kind="ghost" size="md" iconL="bell">Subscribe to digest</Btn>
-          <Btn kind="dark"  size="md" iconL="plus">Submit a story</Btn>
-        </>}
+        subtitle="5 major Marathi dailies Â· today's top stories Â· updated every morning"
       />
 
-
-      {/* Browse all papers */}
       <section>
-        <SectionHead title="All Marathi papers" subtitle="Quick stats on Maharashtra's major dailies"/>
-        <div className="mob-2col" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
-          {papersData.map((p: any) => (
-            <Card key={p.id} pad={0} interactive style={{ overflow: 'hidden' }} onClick={() => { if (p.url && p.url !== '#') window.open(p.url, '_blank'); }}>
-              {p.image ? (
-                <div style={{ height: 80, overflow: 'hidden' }}>
-                  <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+        <SectionHead title="All Marathi papers" subtitle="Quick stats on Maharashtra's major dailies" />
+        <div className={styles.paperGrid}>
+          {papersData.map(paper => (
+            <Card
+              key={paper.id}
+              pad={0}
+              interactive
+              className={styles.paperCard}
+              onClick={() => { if (paper.url && paper.url !== '#') window.open(paper.url, '_blank'); }}
+            >
+              {paper.image ? (
+                <div className={styles.imageFrame}>
+                  <Image className={styles.paperImage} src={paper.image} alt={paper.name} fill unoptimized />
                 </div>
               ) : (
-                <ImgPh kind="news" tone={p.tone} height={80}/>
+                <ImgPh kind="news" tone={paper.tone} height={150} />
               )}
-              <div style={{ padding: '12px 14px' }}>
-                <div style={{ fontFamily: F.deva, fontSize: 18, color: C.saffronDk, fontWeight: 400 }}>{p.dev}</div>
-                <div style={{ fontFamily: F.display, fontSize: 12, fontWeight: 600, color: C.ink, marginTop: 2 }}>{p.id}</div>
-                <div style={{ fontSize: 11, color: C.ink3, fontWeight: 500, marginTop: 4 }}>{p.readers}</div>
+              <div className={styles.paperContent}>
+                <div className={styles.paperName}>{paper.dev}</div>
               </div>
             </Card>
           ))}

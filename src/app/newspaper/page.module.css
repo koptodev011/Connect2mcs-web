@@ -1,0 +1,58 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.paperGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.paperCard {
+  overflow: hidden;
+}
+
+.imageFrame {
+  position: relative;
+  height: 150px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.paperImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: top center;
+}
+
+.paperContent {
+  padding: 12px 14px;
+}
+
+.paperName {
+  color: #b84f12;
+  font-family: var(--font-deva), "Tiro Devanagari Marathi", serif;
+  font-size: 18px;
+  font-weight: 400;
+}
+
+@media (max-width: 1100px) {
+  .paperGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .paperGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .paperGrid {
+    grid-template-columns: 1fr;
+  }
+}

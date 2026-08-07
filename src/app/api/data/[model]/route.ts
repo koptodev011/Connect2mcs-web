@@ -942,7 +942,7 @@ export async function GET(
         return NextResponse.json({ error: 'Model mapping not implemented' }, { status: 404 });
     }
 
-    const countryFilteredModels = !['countries', 'profile'].includes(model);
+    const countryFilteredModels = !['countries', 'profile', 'newspapers'].includes(model);
     if (countryFilteredModels && Array.isArray(data) && selectedCountry !== 'All') {
       const normalizeCountry = (value: string) => {
         const normalized = value.toLowerCase().replace(/[^a-z0-9]/g, '');
