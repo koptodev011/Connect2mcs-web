@@ -1,0 +1,71 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.loading {
+  padding: 40px;
+  color: #6b6256;
+  font-size: 14px;
+}
+
+.backLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  color: #6b6256;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.card { overflow: hidden; }
+.hero { width: 100%; height: 320px; }
+.heroImage { width: 100%; height: 100%; object-fit: cover; }
+.content { padding: 32px 36px; }
+.headingRow { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+
+.title {
+  margin: 16px 0 12px;
+  color: #0f0e0c;
+  font: 700 32px/1.2 var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+  letter-spacing: -.02em;
+}
+
+.fullDate { margin-bottom: 12px; color: #6b6256; font-size: 14px; font-weight: 500; }
+.description { max-width: 640px; margin: 0 0 24px; color: #3a342b; font-size: 15px; font-weight: 500; line-height: 1.6; }
+
+.dateCard {
+  min-width: 160px;
+  flex-shrink: 0;
+  padding: 16px 20px;
+  border: 1px solid rgba(15,14,12,.08);
+  border-radius: 14px;
+  background: #f2ebd8;
+  text-align: center;
+}
+
+.month { color: #b84f12; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.day { margin-top: 4px; color: #0f0e0c; font: 700 42px/1 var(--font-display), "Space Grotesk", "Poppins", sans-serif; }
+.weekday { margin-top: 6px; color: #6b6256; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+
+.metaRow {
+  display: flex;
+  gap: 24px;
+  margin-top: 12px;
+  padding: 24px 0;
+  border-top: 1px solid rgba(15,14,12,.08);
+  border-bottom: 1px solid rgba(15,14,12,.08);
+}
+
+.metaLabel { display: flex; align-items: center; gap: 6px; color: #6b6256; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.metaValue { margin-top: 8px; color: #0f0e0c; font-size: 14px; font-weight: 600; }
+.actions { display: flex; gap: 12px; margin-top: 24px; }
+
+@media (max-width: 700px) {
+  .content { padding: 24px 20px; }
+  .title { font-size: 27px; }
+  .dateCard { width: 100%; }
+}
