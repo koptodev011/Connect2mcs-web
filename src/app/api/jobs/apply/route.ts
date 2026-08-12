@@ -128,15 +128,7 @@ export async function POST(request: NextRequest) {
     );
     if (alreadyApplied) return NextResponse.json({ success: true, alreadyApplied: true });
 
-    const organization = job.AD_Org_ID || user.AD_Org_ID || {
-      id: Number(process.env.IDEMPIERE_ORG_ID || 0),
-      identifier: '*',
-    };
     const payload = {
-      AD_Org_ID: {
-        id: Number(referenceId(organization)),
-        identifier: typeof organization === 'object' ? String(organization.identifier || '*') : '*',
-      },
       AD_User_ID: {
         id: Number(user.id),
         identifier: String(user.Name || user.EMail || user.id),
@@ -155,7 +147,14 @@ export async function POST(request: NextRequest) {
     const responseText = await response.text();
     if (!response.ok) {
       console.error('Job application API failed:', response.status, responseText);
-      return NextResponse.json({ error: 'Could not submit job application' }, { status: response.status });
+      let upstreamError = 'Could not submit job application';
+      try {
+        const parsed = JSON.parse(responseText);
+        upstreamError = String(parsed.message || parsed.error || upstreamError);
+      } catch {
+        if (responseText.trim()) upstreamError = responseText.trim();
+      }
+      return NextResponse.json({ error: upstreamError }, { status: response.status });
     }
 
     let result: unknown = { success: true };
