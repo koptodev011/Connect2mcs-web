@@ -104,7 +104,7 @@ export default function Header() {
       const hasSavedSelection = Boolean(localStorage.getItem('mcs_location'));
       if (forceUserCountry || !hasSavedSelection) {
         const selectedCountry = country || 'All';
-        setLocation({ city: selectedCountry, country: selectedCountry });
+        setLocation({ city: selectedCountry, country: selectedCountry, countryId });
       }
     }
 
@@ -123,7 +123,7 @@ export default function Header() {
   );
 
   function handleCountrySelect(country: CountryOption) {
-    setLocation({ city: country.name, country: country.name, region: country.code || undefined });
+    setLocation({ city: country.name, country: country.name, region: country.code || undefined, countryId: country.id === 'all' ? '' : country.id });
     setLocationModalOpen(false);
     setCitySearch('');
     toast.add(`Country set to ${country.name}`, 'success');

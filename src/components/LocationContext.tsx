@@ -6,6 +6,7 @@ interface Location {
   city: string;
   country: string;
   region?: string;
+  countryId?: string;
 }
 
 interface LocationContextType {
@@ -44,6 +45,7 @@ function persistLocation(loc: Location) {
     const raw = JSON.stringify(loc);
     localStorage.setItem('mcs_location', raw);
     document.cookie = `mcs_country=${encodeURIComponent(loc.country)}; path=/; max-age=31536000; SameSite=Lax`;
+    document.cookie = 'mcs_country_id=' + encodeURIComponent(loc.countryId || '') + '; path=/; max-age=31536000; SameSite=Lax';
     cachedRaw = raw;
     cachedLocation = loc;
     window.dispatchEvent(new Event(LOCATION_EVENT));
