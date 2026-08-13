@@ -9,10 +9,11 @@ import { db } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 
 // ── Post a Job Modal ──────────────────────────────────────────────────────────
-export function PostJobModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export function PostJobModal({ isOpen, onClose, MCS_Type = 'J' }: { isOpen: boolean; onClose: () => void; MCS_Type?: string }) {
   const toast = useGlobalToast();
   const [form, setForm] = useState({ name: '', description: '' });
   const [submitting, setSubmitting] = useState(false);
+  const isInternship = MCS_Type.toUpperCase() === 'I';
   const set = (key: keyof typeof form) => (value: string) =>
     setForm(current => ({ ...current, [key]: value }));
 
@@ -24,7 +25,7 @@ export function PostJobModal({ isOpen, onClose }: { isOpen: boolean; onClose: ()
 
     const token = localStorage.getItem('mcs_token');
     if (!token) {
-      toast.add('Please log in to post a job', 'error');
+      toast.add(isInternship ? 'Please log in to post an internship' : 'Please log in to post a job', 'error');
       return;
     }
 
@@ -36,28 +37,28 @@ export function PostJobModal({ isOpen, onClose }: { isOpen: boolean; onClose: ()
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, MCS_Type }),
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error || 'Could not post job');
+      if (!response.ok) throw new Error(result.error || (isInternship ? 'Could not post internship' : 'Could not post job'));
 
-      toast.add('Job posted successfully!', 'success');
+      toast.add(isInternship ? 'Internship posted successfully!' : 'Job posted successfully!', 'success');
       setForm({ name: '', description: '' });
       onClose();
     } catch (error) {
-      toast.add(error instanceof Error ? error.message : 'Could not post job', 'error');
+      toast.add(error instanceof Error ? error.message : (isInternship ? 'Could not post internship' : 'Could not post job'), 'error');
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Post a Job" width={520}>
-      <Field label="Name" value={form.name} onChange={set('name')} placeholder="Job post name"/>
-      <Field label="Description" value={form.description} onChange={set('description')} multiline placeholder="Describe the job opportunity..."/>
+    <Modal isOpen={isOpen} onClose={onClose} title={isInternship ? "Post an Internship" : "Post a Job"} width={520}>
+      <Field label={isInternship ? "Internship title" : "Name"} value={form.name} onChange={set('name')} placeholder={isInternship ? "e.g. Software Engineering Intern" : "Job post name"}/>
+      <Field label="Description" value={form.description} onChange={set('description')} multiline placeholder={isInternship ? "Describe the internship, responsibilities, and requirements..." : "Describe the job opportunity..."}/>
       <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
         <Btn kind="primary" size="md" full onClick={submit}>
-          {submitting ? 'Posting...' : 'Post job'}
+          {submitting ? 'Posting...' : isInternship ? 'Post internship' : 'Post job'}
         </Btn>
         <Btn kind="ghost" size="md" onClick={onClose}>Cancel</Btn>
       </div>

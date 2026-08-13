@@ -9,6 +9,7 @@ export interface Scholarship {
   deadline: string;
   eligible: boolean;
   criteria?: string;
+  applyUrl?: string;
   tone: Tone;
 }
 
@@ -21,6 +22,7 @@ export interface Internship {
   dur: string;
   when: string;
   logo: string;
+  applyUrl?: string;
   tone: Tone;
 }
 

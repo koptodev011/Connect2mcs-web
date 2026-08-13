@@ -1,160 +1,128 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useEffect, useRef, useState, use } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { C, F } from '@/lib/tokens';
 import Icon from '@/components/Icon';
 import { Btn, Card, Tag, ImgPh, PageHeader } from '@/components/primitives';
 import { ApplyModal } from '@/components/FormModals';
 import type { Scholarship, Internship } from '@/data/learn';
+import styles from './page.module.css';
 
 type DetailItem = (Scholarship & { type: 'scholarship' }) | (Internship & { type: 'internship' });
+
+const RELATED_PAGE_SIZE = 4;
 
 export default function LearnDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [item, setItem] = useState<DetailItem | null>(null);
+  const [relatedItems, setRelatedItems] = useState<DetailItem[]>([]);
+  const [visibleRelated, setVisibleRelated] = useState(RELATED_PAGE_SIZE);
   const [loading, setLoading] = useState(true);
   const [applyOpen, setApplyOpen] = useState(false);
   const [applied, setApplied] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     Promise.all([
       fetch('/api/data/scholarships').then(res => res.json()),
-      fetch('/api/data/internships').then(res => res.json())
+      fetch('/api/data/internships').then(res => res.json()),
     ])
-    .then(([sData, iData]) => {
-      const sch = (sData as Scholarship[]).find(s => s.id === id);
-      if (sch) {
-        setItem({ ...sch, type: 'scholarship' });
-      } else {
-        const int = (iData as Internship[]).find(i => i.id === id);
-        if (int) {
-          setItem({ ...int, type: 'internship' });
-        }
-      }
-      setLoading(false);
-    })
-    .catch(console.error);
+      .then(([sData, iData]) => {
+        setVisibleRelated(RELATED_PAGE_SIZE);
+        const scholarships = Array.isArray(sData) ? sData as Scholarship[] : [];
+        const internships = Array.isArray(iData) ? iData as Internship[] : [];
+        const scholarship = scholarships.find(candidate => candidate.id === id);
+        const internship = internships.find(candidate => candidate.id === id);
+        setItem(scholarship ? { ...scholarship, type: 'scholarship' } : internship ? { ...internship, type: 'internship' } : null);
+        setRelatedItems([
+          ...scholarships.filter(candidate => candidate.id !== id).map(candidate => ({ ...candidate, type: 'scholarship' as const })),
+          ...internships.filter(candidate => candidate.id !== id).map(candidate => ({ ...candidate, type: 'internship' as const })),
+        ]);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) {
-    return <div style={{ padding: 40, textAlign: 'center', color: C.ink3 }}>Loading details...</div>;
-  }
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0]?.isIntersecting) {
+        setVisibleRelated(count => Math.min(count + RELATED_PAGE_SIZE, relatedItems.length));
+      }
+    }, { rootMargin: '240px 0px' });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [relatedItems.length, visibleRelated]);
 
-  if (!item) {
-    return notFound();
-  }
+  if (loading) return <div className={styles.loading}>Loading details...</div>;
+  if (!item) return notFound();
 
   const isScholarship = item.type === 'scholarship';
   const title = isScholarship ? item.title : item.role;
   const org = isScholarship ? item.org : item.co;
-  
+  const handleApply = () => {
+    if (applied) return;
+    if (item.applyUrl) {
+      window.location.assign(item.applyUrl);
+      return;
+    }
+    setApplyOpen(true);
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+    <div className={styles.page}>
       <div>
-        <Link href="/learn" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: C.ink3, textDecoration: 'none', fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
-          <Icon name="chevL" size={14}/> Back to Learn
-        </Link>
-        <PageHeader
-          title={title}
-          subtitle={`Offered by ${org}`}
-          actions={
-            <Btn kind={applied ? 'soft' : 'primary'} size="lg" onClick={() => !applied && setApplyOpen(true)}>
-              {applied ? 'Application Submitted ✓' : 'Apply Now'}
-            </Btn>
-          }
-        />
+        <Link href="/learn" className={styles.backLink}><Icon name="chevL" size={14}/> Back to Learn</Link>
+        <PageHeader title={title} subtitle={`Offered by ${org}`} actions={<Btn kind={applied ? 'soft' : 'primary'} size="lg" onClick={handleApply}>{applied ? 'Application Submitted ✓' : 'Apply Now'}</Btn>}/>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24, alignItems: 'start' }} className="mob-stack">
-        {/* Main Content */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          <ImgPh height={280} tone={item.tone} label={title} />
-          
+      <div className={`${styles.detailGrid} mob-stack`}>
+        <div className={styles.mainContent}>
+          <ImgPh height={280} tone={item.tone} label={title}/>
           <Card pad={32}>
-            <h3 style={{ margin: '0 0 16px', fontFamily: F.display, fontSize: 20, color: C.ink, letterSpacing: '-0.02em' }}>About the Opportunity</h3>
-            <p style={{ margin: '0 0 20px', fontSize: 15, color: C.ink2, lineHeight: 1.6 }}>
-              This {isScholarship ? 'scholarship' : 'internship'} is designed for exceptional individuals looking to advance their career and education. 
-              Successful candidates will demonstrate strong commitment to their field and our community values.
-            </p>
-            
-            <h3 style={{ margin: '0 0 16px', fontFamily: F.display, fontSize: 18, color: C.ink, letterSpacing: '-0.02em' }}>Eligibility Criteria</h3>
-            <ul style={{ margin: 0, paddingLeft: 20, color: C.ink2, fontSize: 15, lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <h3 className={styles.aboutTitle}>About the Opportunity</h3>
+            <p className={styles.description}>This {isScholarship ? 'scholarship' : 'internship'} is designed for exceptional individuals looking to advance their career and education. Successful candidates will demonstrate strong commitment to their field and our community values.</p>
+            <h3 className={styles.criteriaTitle}>Eligibility Criteria</h3>
+            <ul className={styles.criteriaList}>
               <li>Must be of Marathi origin or heavily involved in the community.</li>
-              {isScholarship ? (
-                <>
-                  <li>Pursuing studies in {item.field}.</li>
-                  <li>Exceptional academic standing.</li>
-                </>
-              ) : (
-                <>
-                  <li>Available for the entire {item.dur} duration.</li>
-                  <li>Based in {item.loc} or willing to relocate/work remotely as specified.</li>
-                </>
-              )}
+              {isScholarship ? <><li>Pursuing studies in {item.field}.</li><li>Exceptional academic standing.</li></> : <><li>Available for the entire {item.dur} duration.</li><li>Based in {item.loc} or willing to relocate/work remotely as specified.</li></>}
             </ul>
           </Card>
         </div>
 
-        {/* Sidebar */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <aside className={styles.sidebar}>
           <Card pad={24}>
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: C.ink3, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>
-                {isScholarship ? 'Award Amount' : 'Stipend'}
-              </div>
-              <div className="num" style={{ fontFamily: F.display, fontSize: 28, fontWeight: 700, color: C.ink, letterSpacing: '-0.02em' }}>
-                {isScholarship ? item.amount : item.stipend}
-              </div>
-            </div>
-            
-            {isScholarship ? (
-              <>
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: C.ink3, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4 }}>Field of Study</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>{item.field}</div>
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: C.ink3, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4 }}>Deadline</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: C.brick }}>{item.deadline}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: C.ink3, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4 }}>Status</div>
-                  {item.eligible ? <Tag color={C.green} bg={C.greenLt}>● Eligible</Tag> : <Tag color={C.brick} bg="#FAE0DA">● Closed</Tag>}
-                </div>
-              </>
-            ) : (
-              <>
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: C.ink3, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4 }}>Location</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>{item.loc}</div>
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: C.ink3, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4 }}>Duration</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>{item.dur} ({item.when})</div>
-                </div>
-              </>
-            )}
-            
-            <div style={{ marginTop: 24, paddingTop: 20, borderTop: `1px solid ${C.line}` }}>
-              <Btn kind={applied ? 'soft' : 'primary'} size="lg" full onClick={() => !applied && setApplyOpen(true)}>
-                {applied ? 'Application Submitted ✓' : 'Apply Now'}
-              </Btn>
-            </div>
+            <div className={styles.amountBlock}><div className={styles.metaLabel}>{isScholarship ? 'Award Amount' : 'Stipend'}</div><div className={`${styles.amount} num`}>{isScholarship ? item.amount : item.stipend}</div></div>
+            {isScholarship ? <>
+              <Meta label="Field of Study" value={item.field}/>
+              <Meta label="Deadline" value={item.deadline} urgent/>
+              <div><div className={styles.metaLabel}>Status</div>{item.eligible ? <Tag color="#1F7A3A" bg="#E1F2E6">● Eligible</Tag> : <Tag color="#A8321F" bg="#FAE0DA">● Closed</Tag>}</div>
+            </> : <><Meta label="Location" value={item.loc}/><Meta label="Duration" value={`${item.dur} (${item.when})`}/></>}
+            <div className={styles.applyBlock}><Btn kind={applied ? 'soft' : 'primary'} size="lg" full onClick={handleApply}>{applied ? 'Application Submitted ✓' : 'Apply Now'}</Btn></div>
           </Card>
-        </div>
+        </aside>
       </div>
 
-      <ApplyModal 
-        isOpen={applyOpen} 
-        onClose={() => setApplyOpen(false)} 
-        itemName={title} 
-        onSubmit={(data) => {
-          setApplied(true);
-          // In a real app, this would post to a backend to update user's applications
-        }} 
-      />
+      {relatedItems.length > 0 && <section className={styles.relatedSection}>
+        <div className={styles.relatedHeading}><h2>More opportunities</h2><span>{relatedItems.length} available</span></div>
+        <div className={styles.relatedGrid}>
+          {relatedItems.slice(0, visibleRelated).map(related => {
+            const scholarship = related.type === 'scholarship';
+            const relatedTitle = scholarship ? related.title : related.role;
+            const relatedOrg = scholarship ? related.org : related.co;
+            return <Link href={`/learn/${related.id}`} key={`${related.type}-${related.id}`} className={styles.relatedLink}><Card pad={0} interactive className={styles.relatedCard}><ImgPh height={120} tone={related.tone} label={relatedTitle}/><div className={styles.relatedBody}><Tag>{scholarship ? 'Scholarship' : 'Internship'}</Tag><h3>{relatedTitle}</h3><p>{relatedOrg}</p><strong>{scholarship ? related.amount : related.stipend}</strong></div></Card></Link>;
+          })}
+        </div>
+        {visibleRelated < relatedItems.length && <div ref={loadMoreRef} className={styles.loadMore} aria-label="Loading more opportunities"><span/></div>}
+      </section>}
+
+      <ApplyModal isOpen={applyOpen} onClose={() => setApplyOpen(false)} itemName={title} onSubmit={() => setApplied(true)}/>
     </div>
   );
+}
+
+function Meta({ label, value, urgent = false }: { label: string; value: string; urgent?: boolean }) {
+  return <div className={styles.metaBlock}><div className={styles.metaLabel}>{label}</div><div className={urgent ? styles.urgentValue : styles.metaValue}>{value}</div></div>;
 }

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { C, F } from '@/lib/tokens';
 import Icon from '@/components/Icon';
-import { Btn, Card, Avatar, Tag, PageHeader, useGlobalToast } from '@/components/primitives';
+import { Btn, Card, Avatar, Modal, Tag, PageHeader, useGlobalToast } from '@/components/primitives';
 import { auth, db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, setDoc, addDoc, updateDoc, query, where, getDoc, orderBy, increment } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -15,6 +15,9 @@ function ChatContent() {
   const toast = useGlobalToast();
   const searchParams = useSearchParams();
   const queryUser = searchParams.get('user');
+  const taxiRequestId = searchParams.get('taxiRequestId');
+  const taxiQuoteId = searchParams.get('taxiQuoteId');
+  const taxiFare = searchParams.get('taxiFare');
 
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [usersList, setUsersList] = useState<any[]>([]);
@@ -28,6 +31,8 @@ function ChatContent() {
   const [searchPeople, setSearchPeople] = useState('');
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [taxiBookingOpen, setTaxiBookingOpen] = useState(false);
+  const [taxiBooking, setTaxiBooking] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -110,14 +115,21 @@ function ChatContent() {
   // Handle query params (?user=) redirection
   useEffect(() => {
     if (!queryUser || usersList.length === 0 || !currentUser) return;
-    const targetUser = usersList.find(u => u.name.toLowerCase() === queryUser.toLowerCase());
+    const targetUser = usersList.find(u =>
+      String(u.name || u.displayName || '').toLowerCase() === queryUser.toLowerCase()
+    );
     if (targetUser) {
       const sortedParticipants = [currentUser.uid, targetUser.uid].sort();
       const chatId = sortedParticipants.join('_and_');
       
-      const existing = chats.find(c => c.id === chatId);
+      // Mobile creates random chat document IDs and identifies a direct chat by
+      // its sorted participants. Match that schema before using the web fallback ID.
+      const existing = chats.find(c =>
+        Array.isArray(c.participants) &&
+        [...c.participants].sort().join('|') === sortedParticipants.join('|')
+      );
       if (existing) {
-        setActiveId(chatId);
+        setActiveId(existing.id);
       } else {
         const myUid = currentUser.uid;
         setDoc(doc(db, 'chats', chatId), {
@@ -142,6 +154,20 @@ function ChatContent() {
     }
   }, [queryUser, usersList, currentUser, chats]);
 
+  const confirmTaxiBooking = async () => {
+    if (!taxiRequestId || !taxiQuoteId) return;
+    let userId = 0;
+    try { userId = Number(JSON.parse(localStorage.getItem('mcs_user') || '{}').id) || 0 } catch {}
+    setTaxiBooking(true);
+    try {
+      const response = await fetch('/api/v1/models/MCS_Taxi_Service_Request', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, id: taxiRequestId, quoteId: taxiQuoteId, MCS_TripStatus: 'A', MCS_UserQuote: Number(taxiFare || 0) }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not confirm taxi booking');
+      setTaxiBookingOpen(false);
+      toast.add(`Booking confirmed with ${queryUser || 'driver'}.`, 'success');
+    } catch (error) { toast.add(error instanceof Error ? error.message : 'Could not confirm taxi booking', 'error'); }
+    finally { setTaxiBooking(false); }
+  };
   // Build unified conversation sidebar items
   const groupConversations = groups.map(g => ({
     id: g.id,
@@ -342,7 +368,7 @@ function ChatContent() {
   if (loading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <PageHeader title="Chat" marathi="संवाद" subtitle="Real-time messaging with people you're connected to" />
+        <PageHeader title="Chat" marathi="à¤¸à¤‚à¤µà¤¾à¤¦" subtitle="Real-time messaging with people you're connected to" />
         <div style={{ padding: 40, textAlign: 'center', color: C.ink3, fontWeight: 500 }}>
           Loading members and conversations...
         </div>
@@ -419,11 +445,11 @@ function ChatContent() {
                 <div>
                   <div style={{ fontFamily: F.display, fontSize: 16, fontWeight: 600, color: C.ink, letterSpacing: '-0.02em' }}>{activeConv.name}</div>
                   <div style={{ fontSize: 11.5, color: activeConv.online ? C.green : C.ink3, fontWeight: 600, marginTop: 1 }}>
-                    ● {activeConv.online ? 'Online' : 'Last seen 1h ago'} {activeConv.mandal && <span style={{ color: C.ink4 }}>· {activeConv.mandal}</span>}
+                    ● {activeConv.online ? 'Online' : 'Last seen 1h ago'} {activeConv.mandal && <span style={{ color: C.ink4 }}> · {activeConv.mandal}</span>}
                   </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8 }}>{taxiRequestId && taxiQuoteId && !activeConv.isGroup && <Btn kind="primary" size="sm" onClick={() => setTaxiBookingOpen(true)}>Book Driver</Btn>}
                 <button style={{ width: 36, height: 36, borderRadius: 8, background: C.bgDeep, border: `1px solid ${C.line}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Icon name="user" size={16} color={C.ink2}/>
                 </button>
@@ -500,6 +526,12 @@ function ChatContent() {
         Messages are private between you and your community connections.
       </div>
 
+      <Modal isOpen={taxiBookingOpen} onClose={() => !taxiBooking && setTaxiBookingOpen(false)} title="Booking Confirmed?" width={520}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+          <p style={{ margin: 0, color: C.ink2, fontSize: 16 }}>Is your booking confirmed with {activeConv?.name || queryUser || 'this driver'}?</p>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}><Btn kind="ghost" size="md" disabled={taxiBooking} onClick={() => setTaxiBookingOpen(false)}>No</Btn><Btn kind="primary" size="md" disabled={taxiBooking} onClick={confirmTaxiBooking}>{taxiBooking ? 'Confirming...' : 'Yes'}</Btn></div>
+        </div>
+      </Modal>
       {/* Modal: New Chat (list of connected users) */}
       {newChatOpen && (
         <div style={{

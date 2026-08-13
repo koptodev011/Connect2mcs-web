@@ -12,7 +12,23 @@ const getTone = (id: string | number): Tone => {
 // Several backend fields pack multiple values into one string separated by "·".
 // e.g. taxi ContactDescription = "Rajesh Kulkarni · Boston, MA · Logan Airport".
 const splitDot = (s: any): string[] =>
-  typeof s === 'string' ? s.split('·').map((x) => x.trim()).filter(Boolean) : [];
+  typeof s === 'string'
+    ? s.replace(/\u00c2\u00b7/g, '\u00b7').split('\u00b7').map((x) => x.trim()).filter(Boolean)
+    : [];
+const getRecordCountry = (record: any, fallbackText = ''): string => {
+  const explicitCountry = record.C_Country_ID?.identifier
+    || record.C_Country_ID?.Name
+    || record.Country?.identifier
+    || record.Country
+    || record.MCS_Country;
+  if (typeof explicitCountry === 'string' && explicitCountry.trim()) return explicitCountry.trim();
+
+  const text = fallbackText.toLowerCase();
+  if (/london|united kingdom|\buk\b/.test(text)) return 'United Kingdom';
+  if (/new jersey|united states|\busa\b|\bu\.s\./.test(text)) return 'United States';
+  if (/bengaluru|bangalore|pune|gurgaon|gurugram|mumbai|delhi|india|pmet/.test(text)) return 'India';
+  return 'Worldwide';
+};
 
 // System/service accounts that must never surface as real community members.
 const SYSTEM_NAMES = new Set(['System', 'SuperUser', 'Web Service', 'System (deprecated)']);
@@ -63,6 +79,8 @@ export async function GET(
   const selectedCountry = countryCookie
     ? decodeURIComponent(countryCookie.substring('mcs_country='.length))
     : 'All';
+  const countryIdCookie = cookieHeader.split(';').map(cookie => cookie.trim()).find(cookie => cookie.startsWith('mcs_country_id='));
+  const selectedCountryId = countryIdCookie ? decodeURIComponent(countryIdCookie.substring('mcs_country_id='.length)) : '';
   const sourcePageSize = selectedCountry === 'All' ? pageSize : 100;
   const sourceSkipRecords = selectedCountry === 'All' ? skipRecords : 0;
 
@@ -136,6 +154,173 @@ export async function GET(
           };
         });
         break;
+
+      case 'mentorship-categories': {
+        const rawCategories = await fetchModel('MCS_Mentorship_Category', 'IsActive eq true', { top: 100 });
+        data = rawCategories.map((record: any) => ({
+          id: String(record.id),
+          name: record.Name || record.Value || 'Mentorship',
+        }));
+        break;
+      }
+
+      case 'mentors': {
+        const [rawMentors, mentorshipRequests] = await Promise.all([
+          fetchModel('MCS_Mentor', 'IsActive eq true', { top: 100 }),
+          fetchModel('MCS_Mentorship_Request', 'IsActive eq true', { top: 100 }),
+        ]);
+        const mentorUserIds = Array.from(new Set(rawMentors.map((record: any) => Number(record.AD_User_ID?.id || record.AD_User_ID)).filter(Boolean))) as number[];
+        const mentorUserCountries = new Map<string, string>();
+        await Promise.all(mentorUserIds.map(async userId => {
+          try {
+            const user = await fetchModelRecord('AD_User', String(userId));
+            mentorUserCountries.set(String(userId), String(user.C_Country_ID?.id || ''));
+          } catch {
+            mentorUserCountries.set(String(userId), '');
+          }
+        }));
+        const countryMentors = selectedCountry === 'All' || !selectedCountryId
+          ? rawMentors
+          : rawMentors.filter((record: any) => {
+              const userId = String(record.AD_User_ID?.id || record.AD_User_ID || '');
+              return mentorUserCountries.get(userId) === selectedCountryId;
+            });
+        data = countryMentors.map((record: any) => {
+          const mentorRequests = mentorshipRequests.filter((request: any) => String(request.MCS_Mentor_ID?.id || request.MCS_Mentor_ID) === String(record.id));
+          const mentorFeedback = mentorRequests.filter((request: any) => Number(request.MCS_Rating) > 0 || String(request.MCS_Review || '').trim());
+          const connectionCount = mentorRequests.filter((request: any) => { const status = request.MCS_Status; const code = typeof status === 'object' ? status?.id || status?.identifier : status; return String(code || '').toUpperCase() === 'A' || String(code || '').toLowerCase() === 'accepted'; }).length;
+          const mentorRatings = mentorFeedback.filter((request: any) => Number(request.MCS_Rating) > 0);
+          const averageRating = mentorRatings.length ? mentorRatings.reduce((total: number, request: any) => total + Number(request.MCS_Rating), 0) / mentorRatings.length : 0;
+          const category = record.MCS_Mentorship_Category_ID?.identifier || 'Mentorship';
+          const industry = record.MCS_Industry || 'General';
+          const company = record.MCS_CompanyName?.trim();
+          const designation = record.MCS_Designation?.trim() || industry;
+          const role = company && !designation.toLowerCase().includes(company.toLowerCase())
+            ? `${designation} · ${company}`
+            : designation;
+          const languages = record.MCS_Languages?.identifier
+            ?.replace(/[<>]/g, '')
+            .split(',')
+            .map((value: string) => value.trim())
+            .filter(Boolean) || [];
+          const rate = Number(record.MCS_SessionRate || 0);
+          const currency = record.C_Currency_ID?.identifier || '';
+          return {
+            id: String(record.id),
+            name: record.Name || 'Community mentor',
+            role,
+            years: Number(record.MCS_YearsExperience || 0),
+            city: industry,
+            mandal: category,
+            topics: Array.from(new Set([category])),
+            slots: 0,
+            rate: rate > 0 ? `${currency} ${rate}`.trim() : 'Free',
+            tone: getTone(record.id),
+            company: company || '',
+            designation,
+            description: record.MCS_Bio || record.Description || '',
+            languages,
+            rating: Number(averageRating.toFixed(1)),
+            reviewCount: mentorFeedback.length,
+            connectionCount,
+          };
+        });
+        break;
+      }
+
+      case 'mentor-webinars': {
+        const rawWebinars = await fetchModel('MCS_MentorWebinar', 'IsActive eq true', { top: 100, orderby: 'MCS_StartDate' });
+        data = rawWebinars
+          .filter((record: any) => String(record.MCS_Status?.id || record.MCS_Status || '').toUpperCase() === 'P')
+          .map((record: any) => ({
+          id: String(record.id),
+          title: record.Name || record.Value || 'Mentor webinar',
+          description: record.Description || record.Help || '',
+          help: record.Help || '',
+          mentorId: String(record.MCS_Mentor_ID?.id || ''),
+          mentorName: record.MCS_Mentor_ID?.identifier || 'MCS Mentor',
+          date: record.MCS_StartDate || '',
+          time: record.MCS_time || '',
+          timeZone: record.MCS_TimeZone || '',
+          paid: record.MCS_IsPaid === true,
+          price: Number(record.Price || 0),
+          currency: record.C_Currency_ID?.identifier || '',
+          topic: record.MCS_Topic || 'Mentorship',
+          status: record.MCS_Status?.identifier || 'Upcoming',
+          tone: getTone(record.id),
+        }));
+        break;
+      }
+
+      case 'mentor-details': {
+        if (!recordId) return NextResponse.json({ error: 'Mentor id is required' }, { status: 400 });
+        const record = await fetchModelRecord('MCS_Mentor', recordId);
+        let rawWebinars: any[] = [];
+        for (const webinarModel of ['MCS_MentorWebinar']) {
+          try {
+            rawWebinars = await fetchModel(webinarModel, undefined, { top: 100 });
+            break;
+          } catch {
+            // Webinar availability differs between iDempiere installations.
+          }
+        }
+        const relationId = (value: any) => String(typeof value === 'object' ? value?.id : value || '');
+        const rawReviews = await fetchModel('MCS_Mentorship_Request', `MCS_Mentor_ID eq ${record.id} and IsActive eq true`, { top: 100 });
+        const reviews = rawReviews.filter((request: any) => Number(request.MCS_Rating) > 0 || String(request.MCS_Review || '').trim()).map((request: any) => ({ id: String(request.id), userName: request.AD_User_ID?.identifier || request.Name || 'Community member', rating: Number(request.MCS_Rating || 0), review: String(request.MCS_Review || ''), date: request.Updated || request.Created || '' }));
+        const connectionCount = rawReviews.filter((request: any) => { const status = request.MCS_Status; const code = typeof status === 'object' ? status?.id || status?.identifier : status; return String(code || '').toUpperCase() === 'A' || String(code || '').toLowerCase() === 'accepted'; }).length;
+        const averageRating = reviews.filter((review: any) => review.rating > 0).length ? reviews.filter((review: any) => review.rating > 0).reduce((total: number, review: any) => total + review.rating, 0) / reviews.filter((review: any) => review.rating > 0).length : 0;
+        const webinars = rawWebinars
+          .filter((webinar: any) => String(webinar.MCS_Status?.id || webinar.MCS_Status || '').toUpperCase() === 'P')
+          .filter((webinar: any) => {
+            const linkedMentor = webinar.MCS_Mentor_ID || webinar.Mentor_ID || webinar.AD_User_ID;
+            return relationId(linkedMentor) === String(record.id)
+              || relationId(linkedMentor) === relationId(record.AD_User_ID);
+          })
+          .map((webinar: any) => ({
+            id: String(webinar.id),
+            title: webinar.Name || webinar.Title || webinar.Value || 'Mentor webinar',
+            description: webinar.Description || webinar.MCS_Description || '',
+            date: webinar.MCS_StartDate || webinar.StartDate || webinar.DateFrom || webinar.Created || '',
+            duration: webinar.MCS_Duration || webinar.Duration || '',
+            time: webinar.MCS_time || '',
+            timeZone: webinar.MCS_TimeZone || '',
+            topic: webinar.MCS_Topic || '',
+            paid: webinar.MCS_IsPaid === true,
+            price: Number(webinar.Price || 0),
+            currency: webinar.C_Currency_ID?.identifier || '',
+            url: webinar.MCS_WebinarURL || webinar.JoinURL || webinar.URL || '',
+            registrationUrl: webinar.URL || '',
+            currencyId: String(webinar.C_Currency_ID?.id || ''),
+            imageId: String(webinar.AD_Image_ID?.id || ''),
+            statusCode: String(webinar.MCS_Status?.id || webinar.MCS_Status || '').toUpperCase(),
+            status: webinar.MCS_Status?.identifier || webinar.Status || (webinar.IsActive === false ? 'Inactive' : 'Upcoming'),
+          }));
+        return NextResponse.json({
+          mentor: {
+            id: String(record.id),
+            name: record.Name || 'Community mentor',
+            bio: record.MCS_Bio || record.Description || '',
+            description: record.Description || '',
+            designation: record.MCS_Designation || '',
+            company: record.MCS_CompanyName || '',
+            industry: record.MCS_Industry || '',
+            category: record.MCS_Mentorship_Category_ID?.identifier || 'Mentorship',
+            years: Number(record.MCS_YearsExperience || 0),
+            verified: record.MCS_IsVerified === true,
+            rate: Number(record.MCS_SessionRate || 0),
+            currency: record.C_Currency_ID?.identifier || '',
+            languages: record.MCS_Languages?.identifier?.replace(/[<>]/g, '').split(',').map((value: string) => value.trim()).filter(Boolean) || [],
+            user: record.AD_User_ID?.identifier || '',
+            created: record.Created || '',
+            updated: record.Updated || '',
+            rating: Number(averageRating.toFixed(1)),
+            reviewCount: reviews.length,
+            connectionCount,
+          },
+          reviews,
+          webinars,
+        });
+      }
 
       case 'mandals':
         if (recordId) {
@@ -381,7 +566,9 @@ export async function GET(
           deadline: record.MCS_Deadline ? new Date(record.MCS_Deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Rolling',
           eligible: true,
           criteria: record.MCS_EligibilityCriteria || '',
-          tone: getTone(record.id)
+          applyUrl: record.MCS_ApplyURL || '',
+          tone: getTone(record.id),
+          country: getRecordCountry(record, record.MCS_EligibilityCriteria || record.MCS_FIeld || '')
         }));
         break;
 
@@ -404,8 +591,10 @@ export async function GET(
             dur: record.Duration ? `${record.Duration} months` : '3 months',
             when: record.StartDate ? new Date(record.StartDate).toLocaleDateString() : 'Summer',
             criteria: record.MCS_EligibilityCriteria || '',
+            applyUrl: record.MCS_ApplyURL || '',
             logo: (co || 'C').charAt(0),
-            tone: getTone(record.id)
+            tone: getTone(record.id),
+            country: getRecordCountry(record, [record.MCS_EligibilityCriteria, parts[1], co].filter(Boolean).join(' '))
           };
         });
         break;
@@ -522,17 +711,25 @@ export async function GET(
 
       case 'taxi':
         const rawTaxi = await fetchModel('MCS_TaxiDriver');
-        data = rawTaxi.map((record: any) => {
+        data = rawTaxi.filter((record: any) => {
+          if (selectedCountry === 'All') return true;
+          const recordCountryId = String(record.C_Country_ID?.id || '');
+          const recordCountry = getRecordCountry(record, record.ContactDescription || '');
+          return selectedCountryId
+            ? !recordCountryId || recordCountryId === selectedCountryId
+            : recordCountry === 'Worldwide' || recordCountry.toLowerCase() === selectedCountry.toLowerCase();
+        }).map((record: any) => {
           // ContactDescription packs "Name · City · Service areas"
           const parts = splitDot(record.ContactDescription);
           return {
             id: record.id.toString(),
             name: parts[0] || `Driver #${record.id}`,
-            city: parts[1] || 'City',
+            city: record.C_City_ID?.identifier || record.City || parts[1] || 'City',
+            country: getRecordCountry(record, record.ContactDescription || ''),
             areas: parts[2] || 'Metro Area',
             vehicle: record.MCS_Vehicle || 'Sedan',
             type: record.MCS_VehicleType || 'Standard',
-            langs: ['Marathi', 'English'],
+            langs: record.MCS_Languages ? record.MCS_Languages.split(',').map((lang: string) => lang.trim()) : ['Marathi', 'English'],
             rate: record.Rate ? `$${record.Rate}/mi` : 'Standard',
             base: record.MCS_BaseFare ? `$${record.MCS_BaseFare}` : '-',
             rating: record.Rating ? parseFloat(record.Rating) : 4.8,
@@ -1005,7 +1202,7 @@ export async function GET(
         return NextResponse.json({ error: 'Model mapping not implemented' }, { status: 404 });
     }
 
-    const countryFilteredModels = !['countries', 'profile', 'newspapers', 'news-categories', 'news'].includes(model);
+    const countryFilteredModels = !['countries', 'profile', 'newspapers', 'news-categories', 'news', 'taxi', 'mentors', 'mentorship-categories', 'mentor-details', 'mentor-webinars'].includes(model);
     if (countryFilteredModels && Array.isArray(data) && selectedCountry !== 'All') {
       const normalizeCountry = (value: string) => {
         const normalized = value.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -1027,7 +1224,13 @@ export async function GET(
           item.where,
           item.address,
         ].filter((value): value is string => typeof value === 'string' && value.length > 0);
-        return candidates.some(value => normalizeCountry(value).includes(wantedCountry));
+        return candidates.some(value => {
+          const normalizedValue = normalizeCountry(value);
+          if (model === 'scholarships' || model === 'internships') {
+            return normalizedValue === wantedCountry;
+          }
+          return normalizedValue.includes(wantedCountry);
+        });
       });
       data = data.slice(skipRecords, skipRecords + pageSize);
     }

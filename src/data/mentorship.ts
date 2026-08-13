@@ -1,6 +1,7 @@
 import type { Tone } from '@/lib/tokens';
 
 export interface Mentor {
+  id?: string;
   name: string;
   role: string;
   years: number;
@@ -10,6 +11,13 @@ export interface Mentor {
   slots: number;
   rate: string;
   tone: Tone;
+  company?: string;
+  designation?: string;
+  description?: string;
+  languages?: string[];
+  rating?: number;
+  reviewCount?: number;
+  connectionCount?: number;
 }
 
 export interface MentorSession {
@@ -42,7 +50,7 @@ export const mentorSessions: MentorSession[] = [
 
 export const mentorStats: MentorStat[] = [
   { v: '142',    l: 'Active mentors',     h: 'across 12 fields'       },
-  { v: '4.9',    l: 'Average rating',     h: 'from 1,200+ sessions'   },
-  { v: '30 min', l: 'Default slot',       h: 'free · book in 1 click' },
-  { v: '38',     l: 'Sessions this week', h: 'community-wide'         },
+  // { v: '4.9',    l: 'Average rating',     h: 'from 1,200+ sessions'   },
+  // { v: '30 min', l: 'Default slot',       h: 'free · book in 1 click' },
+  // { v: '38',     l: 'Sessions this week', h: 'community-wide'         },
 ];

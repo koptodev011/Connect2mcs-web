@@ -1,0 +1,60 @@
+.page { display: flex; flex-direction: column; gap: 22px; }
+.statsGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.sessionsHeader { padding: 14px 18px; border-bottom: 1px solid rgba(15,14,12,.08); display: flex; justify-content: space-between; align-items: center; }
+.sessionsTitle { font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif; font-size: 16px; font-weight: 600; color: #0f0e0c; letter-spacing: -.02em; }
+.sessionMeta { font-size: 12px; color: #6b6256; font-weight: 500; margin-top: 2px; }
+.sessionRow { display: grid; grid-template-columns: auto 1fr auto auto; gap: 16px; align-items: center; padding: 14px 18px; border-bottom: 1px solid rgba(15,14,12,.08); }
+.lastRow { border-bottom: none; }
+.minWidthZero { min-width: 0; }
+.sessionTopic { font-size: 14px; font-weight: 700; color: #0f0e0c; }
+.status { padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.upcoming { background: #ffe9d6; color: #b84f12; }
+.past { background: #f2ebd8; color: #6b6256; }
+.filters { display: flex; gap: 6px; overflow-x: auto; }
+.sortSelect { appearance: none; background: transparent; border: none; color: #6b6256; font-size: 13px; font-weight: 600; cursor: pointer; outline: none; }
+.mentorGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.mentorHeader { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.mentorIdentity { flex: 1; min-width: 0; }
+.mentorName { font-size: 15px; font-weight: 700; color: #0f0e0c; line-height: 1.25; }
+.mentorRole { font-size: 12.5px; color: #6b6256; font-weight: 500; margin-top: 2px; line-height: 1.35; }
+.mentorLocation { font-size: 11px; color: #a39a8a; font-weight: 600; margin-top: 4px; letter-spacing: .06em; text-transform: uppercase; }
+.topics { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 10px 0; border-top: 1px solid rgba(15,14,12,.08); border-bottom: 1px solid rgba(15,14,12,.08); font-size: 11.5px; font-weight: 600; }
+.metricLabel { color: #a39a8a; }
+.metricValue { font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif; font-size: 16px; font-weight: 700; color: #0f0e0c; }
+.rate { font-size: 14px; font-weight: 700; color: #0f0e0c; }
+.available { color: #1f7a3a; }
+.unavailable { color: #6b6256; }
+.cardActions { display: flex; gap: 8px; margin-top: 14px; }
+.loadMore { height: 1px; }
+.modalBody { margin-bottom: 16px; }
+.modalDescription { font-size: 13px; color: #6b6256; font-weight: 500; margin-bottom: 16px; }
+.modalActions { display: flex; gap: 10px; }
+
+.mentorMessage { grid-column: 1 / -1; padding: 32px; text-align: center; color: #6b6256; font-size: 14px; font-weight: 500; }
+
+.searchWrap { display: flex; align-items: center; gap: 10px; padding: 11px 14px; background: #fff; border: 1px solid rgba(15,14,12,.14); border-radius: 12px; }
+.searchInput { flex: 1; min-width: 0; border: none; outline: none; background: transparent; color: #0f0e0c; font: inherit; font-size: 14px; }
+.searchInput::placeholder { color: #a39a8a; }
+.clearSearch { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: none; border-radius: 50%; background: #f2ebd8; color: #6b6256; cursor: pointer; font-size: 18px; line-height: 1; }
+
+.webinarGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.webinarCard { display: flex; flex-direction: column; min-height: 245px; }
+.webinarTop, .webinarFooter, .webinarMeta { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.webinarStatus { color: #6b6256; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.webinarTitle { margin: 16px 0 8px; color: #0f0e0c; font-size: 18px; line-height: 1.3; }
+.webinarDescription { flex: 1; margin: 0 0 18px; color: #6b6256; font-size: 13px; line-height: 1.6; }
+.webinarMeta { justify-content: flex-start; flex-wrap: wrap; padding: 12px 0; border-top: 1px solid rgba(15,14,12,.08); border-bottom: 1px solid rgba(15,14,12,.08); color: #6b6256; font-size: 12px; }
+.webinarMeta span { display: inline-flex; align-items: center; gap: 5px; }
+.webinarFooter { margin-top: 14px; }.webinarFooter > div { display: flex; flex-direction: column; gap: 2px; }.webinarFooter span { color: #a39a8a; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }.webinarFooter strong { color: #3a342b; font-size: 12px; }
+@media (max-width: 900px) { .webinarGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .webinarGrid { grid-template-columns: 1fr; } }
+
+.myMentorsGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.myMentorCard { display: flex; align-items: center; gap: 13px; }
+.myMentorInfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.myMentorInfo strong { color: #0f0e0c; font-size: 14px; }.myMentorInfo span { overflow: hidden; color: #6b6256; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }.myMentorInfo small { color: #a39a8a; font-size: 11px; }
+.myMentorsEmpty { padding: 20px; text-align: center; color: #6b6256; font-size: 13px; }
+@media (max-width: 700px) { .myMentorsGrid { grid-template-columns: 1fr; }.myMentorCard { align-items: flex-start; flex-wrap: wrap; } }
+
+.mentorRating { margin-top: 5px; color: #3a342b; font-size: 12px; font-weight: 700; }.mentorRating span { color: #b8893c; }.mentorRating small { color: #6b6256; font-weight: 500; }
