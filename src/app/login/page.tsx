@@ -54,6 +54,13 @@ export default function LoginPage() {
 
       // API login succeeded - save user details
       localStorage.setItem('mcs_user', JSON.stringify(apiData.user));
+      localStorage.setItem('MCS_LoginType', String(apiData.user.loginType || ''));
+      const linkedProfileKeys = ['MCS_Maid_ID', 'MCS_Mentor_ID', 'MCS_TaxiDriver_ID', 'MCS_TiffinProvider_ID'];
+      linkedProfileKeys.forEach((key) => {
+        const profileId = apiData.user.linkedProfileIds?.[key];
+        if (profileId) localStorage.setItem(key, String(profileId));
+        else localStorage.removeItem(key);
+      });
       if (apiData.token) {
         localStorage.setItem('mcs_token', apiData.token);
       }
@@ -114,7 +121,9 @@ export default function LoginPage() {
 
       // Dispatch custom event to notify Header.tsx instantly
       window.dispatchEvent(new Event('mcs_auth_change'));
-      router.push('/profile');
+      const returnTo = localStorage.getItem('mcs_login_return');
+      if (returnTo) localStorage.removeItem('mcs_login_return');
+      router.push(returnTo || '/profile');
 
     } catch (err: any) {
       console.error(err);

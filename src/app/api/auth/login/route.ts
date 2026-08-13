@@ -55,13 +55,43 @@ export async function POST(request: Request) {
 
         const escapedUsername = String(username).replace(/'/g, "''");
         const filters = [`Name eq '${escapedUsername}'`, `Value eq '${escapedUsername}'`, `EMail eq '${escapedUsername}'`];
-        let erpUser: { id?: number | string } | null = null;
+        let erpUser: { id?: number | string; MCS_LoginType?: string | number | { id?: string | number; identifier?: string } } | null = null;
         for (const filter of filters) {
           const userResponse = await fetch(`${API_URL}/models/AD_User?$filter=${encodeURIComponent(filter)}&$top=1`, { headers: { Authorization: `Bearer ${data.token}`, Accept: 'application/json' }, cache: 'no-store' });
-          if (userResponse.ok) { const payload = await userResponse.json() as { records?: Array<{ id?: number | string }> }; erpUser = payload.records?.[0] || null; if (erpUser) break; }
+          if (userResponse.ok) { const payload = await userResponse.json() as { records?: Array<{ id?: number | string; MCS_LoginType?: string | number | { id?: string | number; identifier?: string } }> }; erpUser = payload.records?.[0] || null; if (erpUser) break; }
         }
         const userId = Number(erpUser?.id) || null;
-        const loginResponse = NextResponse.json({ success: true, token: data.token, user: { id: userId, name: username, city: 'Mumbai', avatar: initials } });
+        const linkedProfileModels = [
+          'MCS_Maid',
+          'MCS_Mentor',
+          'MCS_TaxiDriver',
+          'MCS_TiffinProvider',
+        ] as const;
+        const linkedProfileIds = Object.fromEntries(
+          userId
+            ? (await Promise.all(linkedProfileModels.map(async (model) => {
+                try {
+                  const filter = `AD_User_ID eq ${userId} and IsActive eq true`;
+                  const modelResponse = await fetch(
+                    `${API_URL}/models/${model}?$filter=${encodeURIComponent(filter)}&$top=1`,
+                    { headers: { Authorization: `Bearer ${data.token}`, Accept: 'application/json' }, cache: 'no-store' },
+                  );
+                  if (!modelResponse.ok) return null;
+                  const payload = await modelResponse.json() as { records?: Array<{ id?: number | string }> };
+                  const profileId = payload.records?.[0]?.id;
+                  return profileId ? [`${model}_ID`, String(profileId)] as const : null;
+                } catch (profileLookupError) {
+                  console.warn(`Failed to look up ${model} for AD_User_ID ${userId}:`, profileLookupError);
+                  return null;
+                }
+              }))).filter((entry): entry is readonly [string, string] => entry !== null)
+            : [],
+        );
+        const loginTypeValue = erpUser?.MCS_LoginType;
+        const loginType = typeof loginTypeValue === 'object'
+          ? String(loginTypeValue.id || loginTypeValue.identifier || '')
+          : String(loginTypeValue || '');
+        const loginResponse = NextResponse.json({ success: true, token: data.token, user: { id: userId, name: username, city: 'Mumbai', avatar: initials, loginType, linkedProfileIds } });
         if (userId) loginResponse.cookies.set('mcs_favorite_user', signFavoriteUser(userId), { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 60 * 60 * 24 * 30 });
         return loginResponse;
       } else {
