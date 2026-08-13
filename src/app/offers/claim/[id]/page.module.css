@@ -1,0 +1,5 @@
+.page { display: flex; flex-direction: column; gap: 22px; }
+.card { max-width: 520px; margin: 24px auto 0; text-align: center; }
+.icon { display: grid; place-items: center; width: 64px; height: 64px; margin: 0 auto 18px; border-radius: 18px; background: #ffe9d6; color: #b84f12; font-size: 28px; font-weight: 800; }
+.card h2 { margin: 0 0 8px; color: #0f0e0c; font-family: var(--font-display), "Space Grotesk", sans-serif; font-size: 24px; }
+.card p { max-width: 400px; margin: 0 auto 22px; color: #6b6256; font-size: 14px; line-height: 1.6; }
