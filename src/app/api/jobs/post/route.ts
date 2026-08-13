@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { name, description } = await request.json();
+    const { name, description, MCS_Type = 'J' } = await request.json();
     if (!name?.trim() || !description?.trim()) {
       return NextResponse.json({ error: 'Name and description are required' }, { status: 400 });
     }
@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
     const payload = {
       Name: String(name).trim(),
       Description: String(description).trim(),
+      MCS_Type: String(MCS_Type).trim() || 'J',
       AD_User_ID: {
         id: Number(user.id),
         identifier: String(user.Name || user.EMail || user.id),

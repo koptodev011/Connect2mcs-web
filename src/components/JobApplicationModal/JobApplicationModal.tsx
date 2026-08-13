@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from 'react';
 import { Btn, Modal, useGlobalToast } from '@/components/primitives';
-import { Job } from '@/data/jobs';
 import styles from './JobApplicationModal.module.css';
 
 export interface ApplicantProfile {
@@ -11,20 +10,26 @@ export interface ApplicantProfile {
   phone: string;
 }
 
+interface ApplicationItem {
+  id: string;
+  role: string;
+}
+
 interface JobApplicationModalProps {
   isOpen: boolean;
-  job: Job | null;
+  job: ApplicationItem | null;
   initialProfile: ApplicantProfile;
   onClose: () => void;
   onSubmitted: (jobId: string) => void;
+  applicationType?: 'job' | 'internship';
 }
 
-export function JobApplicationModal({ isOpen, job, initialProfile, onClose, onSubmitted }: JobApplicationModalProps) {
+export function JobApplicationModal({ isOpen, job, initialProfile, onClose, onSubmitted, applicationType = 'job' }: JobApplicationModalProps) {
   const [profile, setProfile] = useState(initialProfile);
   const [resume, setResume] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const toast = useGlobalToast();
-
+  const isInternship = applicationType === 'internship';
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -35,14 +40,14 @@ export function JobApplicationModal({ isOpen, job, initialProfile, onClose, onSu
 
     setSubmitting(true);
     try {
-      const response = await fetch('/api/jobs/apply', {
+      const response = await fetch(isInternship ? '/api/internships/apply' : '/api/jobs/apply', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          jobId: job.id,
+          ...(isInternship ? { internshipId: job.id } : { jobId: job.id }),
           name: profile.name,
           email: profile.email,
           phone: profile.phone,
@@ -50,20 +55,20 @@ export function JobApplicationModal({ isOpen, job, initialProfile, onClose, onSu
         }),
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error || 'Could not submit job application');
+      if (!response.ok) throw new Error(result.error || `Could not submit ${isInternship ? 'internship' : 'job'} application`);
 
       onSubmitted(job.id);
       toast.add(result.alreadyApplied ? 'Application already sent' : 'Application sent successfully!', result.alreadyApplied ? 'info' : 'success');
       onClose();
     } catch (error) {
-      toast.add(error instanceof Error ? error.message : 'Could not submit job application', 'error');
+      toast.add(error instanceof Error ? error.message : `Could not submit ${isInternship ? 'internship' : 'job'} application`, 'error');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={() => !submitting && onClose()} title={`Apply for ${job?.role || 'job'}`} width={540}>
+    <Modal isOpen={isOpen} onClose={() => !submitting && onClose()} title={`Apply for ${job?.role || (isInternship ? 'internship' : 'job')}`} width={540}>
       <form className={styles.form} onSubmit={submit}>
         <label className={styles.field}>
           <span>Name</span>
