@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -70,24 +70,24 @@ export default function LoginPage() {
       let fbSuccess = false;
 
       try {
-        console.log(`🔥 Attempting Firebase auth for: ${emailForFirebase}`);
+        console.log(`ðŸ”¥ Attempting Firebase auth for: ${emailForFirebase}`);
         const userCredential = await signInWithEmailAndPassword(auth, emailForFirebase, password);
-        console.log("✅ Firebase login successful:", userCredential.user);
+        console.log("âœ… Firebase login successful:", userCredential.user);
         fbSuccess = true;
       } catch (fbError: any) {
-        console.warn("⚠️ Firebase login failed, checking error code:", fbError.code);
+        console.warn("âš ï¸ Firebase login failed, checking error code:", fbError.code);
         // 'auth/user-not-found' or 'auth/invalid-credential' can occur if the user doesn't exist yet
         if (fbError.code === 'auth/user-not-found' || fbError.code === 'auth/invalid-credential') {
           try {
-            console.log(`🌱 Creating user in Firebase on-the-fly: ${emailForFirebase}`);
+            console.log(`ðŸŒ± Creating user in Firebase on-the-fly: ${emailForFirebase}`);
             const registerCredential = await createUserWithEmailAndPassword(auth, emailForFirebase, password);
-            console.log("✅ Firebase registration & login successful:", registerCredential.user);
+            console.log("âœ… Firebase registration & login successful:", registerCredential.user);
             fbSuccess = true;
           } catch (regError: any) {
-            console.error("❌ Firebase automatic registration failed:", regError);
+            console.error("âŒ Firebase automatic registration failed:", regError);
           }
         } else {
-          console.error("❌ Firebase login error:", fbError);
+          console.error("âŒ Firebase login error:", fbError);
         }
       }
 
@@ -96,20 +96,23 @@ export default function LoginPage() {
         try {
           const userRef = doc(db, 'users', auth.currentUser.uid);
           const userSnap = await getDoc(userRef);
+          await setDoc(userRef, {
+            uid: auth.currentUser.uid,
+            name: apiData.user.name,
+            email: auth.currentUser.email || emailForFirebase.toLowerCase(),
+            erpUserId: String(apiData.user.id || ''),
+            adUserId: String(apiData.user.id || ''),
+            role: 'New Member',
+            city: apiData.user.city || 'Boston, USA',
+            mandal: 'General Mandal',
+            open: 'Networking',
+            conn: '0 mutual'
+          }, { merge: true });
           if (!userSnap.exists()) {
-            await setDoc(userRef, {
-              uid: auth.currentUser.uid,
-              name: apiData.user.name,
-              role: 'New Member',
-              city: apiData.user.city || 'Boston, USA',
-              mandal: 'General Mandal',
-              open: 'Networking',
-              conn: '0 mutual'
-            });
-            console.log(`✅ Registered user profile in users collection: ${apiData.user.name}`);
+            console.log(`Registered user profile in users collection: ${apiData.user.name}`);
           }
         } catch (dbErr) {
-          console.error("❌ Failed to verify/register user profile in Firestore:", dbErr);
+          console.error("âŒ Failed to verify/register user profile in Firestore:", dbErr);
         }
       }
 
@@ -222,7 +225,7 @@ export default function LoginPage() {
             gap: 6
           }}>
             <span>l</span>
-            <span style={{ color: C.saffronDk, fontWeight: 700 }}>लॉगिन</span>
+            <span style={{ color: C.saffronDk, fontWeight: 700 }}>à¤²à¥‰à¤—à¤¿à¤¨</span>
             <span>l</span>
             <span>Connect to your community</span>
           </div>
@@ -308,7 +311,7 @@ export default function LoginPage() {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                 disabled={loading}
                 style={{
                   flex: 1,
@@ -473,7 +476,7 @@ export default function LoginPage() {
           Continue as Guest
         </button>
 
-        <Modal isOpen={guestDialogOpen} onClose={() => setGuestDialogOpen(false)} title="Continue as Guest" marathi="पाहुणा म्हणून सुरू ठेवा" width={400}>
+        <Modal isOpen={guestDialogOpen} onClose={() => setGuestDialogOpen(false)} title="Continue as Guest" marathi="à¤ªà¤¾à¤¹à¥à¤£à¤¾ à¤®à¥à¤¹à¤£à¥‚à¤¨ à¤¸à¥à¤°à¥‚ à¤ à¥‡à¤µà¤¾" width={400}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '0 0 8px' }}>
             {['Student', 'Entrepreneur', 'NRI Member'].map(role => (
               <button

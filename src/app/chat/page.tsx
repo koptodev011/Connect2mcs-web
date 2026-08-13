@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -9,12 +9,20 @@ import { Btn, Card, Avatar, Modal, Tag, PageHeader, useGlobalToast } from '@/com
 import { auth, db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, setDoc, addDoc, updateDoc, query, where, getDoc, orderBy, increment } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import { getOrCreateAccommodationChat } from '@/lib/accommodation-chat';
 
 function ChatContent() {
   const router = useRouter();
   const toast = useGlobalToast();
   const searchParams = useSearchParams();
   const queryUser = searchParams.get('user');
+  const chatSource = searchParams.get('source');
+  const housingOwnerId = searchParams.get('ownerId') || '';
+  const housingOwnerEmail = searchParams.get('email') || '';
+  const housingPropertyId = searchParams.get('propertyId') || '';
+  const housingPropertyTitle = searchParams.get('propertyTitle') || '';
+  const housingPropertyPrice = searchParams.get('propertyPrice') || '';
+  const housingPropertyLocation = searchParams.get('propertyLocation') || '';
   const taxiRequestId = searchParams.get('taxiRequestId');
   const taxiQuoteId = searchParams.get('taxiQuoteId');
   const taxiFare = searchParams.get('taxiFare');
@@ -35,6 +43,7 @@ function ChatContent() {
   const [taxiBooking, setTaxiBooking] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
+  const housingChatStarted = useRef(false);
 
   // 1. Auth Listener
   useEffect(() => {
@@ -112,9 +121,56 @@ function ChatContent() {
     }
   }, [queryChatId]);
 
+  // Shared-accommodation chat follows the mobile app schema: resolve the ERP
+  // property owner to a Firebase user, then reuse or create a participant chat.
+  useEffect(() => {
+    if (
+      chatSource !== 'housing' ||
+      !currentUser ||
+      !queryUser ||
+      housingChatStarted.current
+    ) {
+      return;
+    }
+
+    housingChatStarted.current = true;
+    getOrCreateAccommodationChat(currentUser, {
+      ownerId: housingOwnerId,
+      ownerName: queryUser,
+      ownerEmail: housingOwnerEmail,
+      propertyId: housingPropertyId,
+      propertyTitle: housingPropertyTitle,
+      propertyPrice: housingPropertyPrice,
+      propertyLocation: housingPropertyLocation,
+    })
+      .then((chatId) => {
+        setActiveId(chatId);
+        router.replace(`/chat?chatId=${encodeURIComponent(chatId)}`);
+      })
+      .catch((error: unknown) => {
+        housingChatStarted.current = false;
+        toast.add(
+          error instanceof Error ? error.message : 'Could not open property chat.',
+          'error',
+        );
+      });
+  }, [
+    chatSource,
+    currentUser,
+    housingOwnerEmail,
+    housingOwnerId,
+    housingPropertyId,
+    housingPropertyLocation,
+    housingPropertyPrice,
+    housingPropertyTitle,
+    queryUser,
+    router,
+    toast,
+  ]);
+
   // Handle query params (?user=) redirection
   useEffect(() => {
-    if (!queryUser || usersList.length === 0 || !currentUser) return;
+    if (chatSource === 'housing' || !queryUser || usersList.length === 0 || !currentUser) return;
     const targetUser = usersList.find(u =>
       String(u.name || u.displayName || '').toLowerCase() === queryUser.toLowerCase()
     );
@@ -152,7 +208,7 @@ function ChatContent() {
         });
       }
     }
-  }, [queryUser, usersList, currentUser, chats]);
+  }, [chatSource, queryUser, usersList, currentUser, chats]);
 
   const confirmTaxiBooking = async () => {
     if (!taxiRequestId || !taxiQuoteId) return;
@@ -368,7 +424,7 @@ function ChatContent() {
   if (loading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <PageHeader title="Chat" marathi="à¤¸à¤‚à¤µà¤¾à¤¦" subtitle="Real-time messaging with people you're connected to" />
+        <PageHeader title="Chat" marathi="Ã Â¤Â¸Ã Â¤â€šÃ Â¤ÂµÃ Â¤Â¾Ã Â¤Â¦" subtitle="Real-time messaging with people you're connected to" />
         <div style={{ padding: 40, textAlign: 'center', color: C.ink3, fontWeight: 500 }}>
           Loading members and conversations...
         </div>
@@ -380,7 +436,7 @@ function ChatContent() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <PageHeader
         title="Chat"
-        marathi="संवाद"
+        marathi="à¤¸à¤‚à¤µà¤¾à¤¦"
         subtitle="Real-time messaging with people you're connected to"
         actions={<>
           <Btn kind="ghost" size="md" iconL="search">Search messages</Btn>
@@ -394,7 +450,7 @@ function ChatContent() {
           <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.line}` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: C.bgDeep, borderRadius: 10 }}>
               <Icon name="search" size={15} color={C.ink3}/>
-              <input value={searchPeople} onChange={e => setSearchPeople(e.target.value)} placeholder="Search people, groups…" style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: 13, fontWeight: 500, fontFamily: 'inherit' }}/>
+              <input value={searchPeople} onChange={e => setSearchPeople(e.target.value)} placeholder="Search people, groupsâ€¦" style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: 13, fontWeight: 500, fontFamily: 'inherit' }}/>
             </div>
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -415,7 +471,7 @@ function ChatContent() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {c.name}{c.isGroup && <span style={{ color: C.ink3, fontWeight: 500, fontSize: 11, marginLeft: 4 }}>· group</span>}
+                        {c.name}{c.isGroup && <span style={{ color: C.ink3, fontWeight: 500, fontSize: 11, marginLeft: 4 }}>Â· group</span>}
                       </span>
                       <span style={{ fontSize: 11, color: C.ink3, fontWeight: 500, flexShrink: 0 }}>
                         {c.lastMessageTime ? c.lastMessageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
@@ -445,7 +501,7 @@ function ChatContent() {
                 <div>
                   <div style={{ fontFamily: F.display, fontSize: 16, fontWeight: 600, color: C.ink, letterSpacing: '-0.02em' }}>{activeConv.name}</div>
                   <div style={{ fontSize: 11.5, color: activeConv.online ? C.green : C.ink3, fontWeight: 600, marginTop: 1 }}>
-                    ● {activeConv.online ? 'Online' : 'Last seen 1h ago'} {activeConv.mandal && <span style={{ color: C.ink4 }}> · {activeConv.mandal}</span>}
+                    â— {activeConv.online ? 'Online' : 'Last seen 1h ago'} {activeConv.mandal && <span style={{ color: C.ink4 }}> Â· {activeConv.mandal}</span>}
                   </div>
                 </div>
               </div>
@@ -487,7 +543,7 @@ function ChatContent() {
                       {m.text}
                     </div>
                     <div style={{ fontSize: 10.5, color: C.ink3, fontWeight: 500, marginTop: 4, textAlign: isMe ? 'right' : 'left', padding: '0 6px' }}>
-                      {m.at}{isMe && ' · Read'}
+                      {m.at}{isMe && ' Â· Read'}
                     </div>
                   </div>
                 );
@@ -503,7 +559,7 @@ function ChatContent() {
                 value={draft}
                 onChange={e => setDraft(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                placeholder={`Message ${activeConv.name}…`}
+                placeholder={`Message ${activeConv.name}â€¦`}
                 style={{
                   flex: 1, padding: '10px 14px', border: `1px solid ${C.lineMid}`, borderRadius: 10,
                   fontSize: 13.5, fontWeight: 500, outline: 'none', fontFamily: 'inherit',
@@ -522,7 +578,7 @@ function ChatContent() {
       </Card>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 12, color: C.ink3, fontWeight: 500 }}>
-        <Tag color={C.green} bg={C.greenLt}>● End-to-end encrypted</Tag>
+        <Tag color={C.green} bg={C.greenLt}>â— End-to-end encrypted</Tag>
         Messages are private between you and your community connections.
       </div>
 
@@ -544,7 +600,7 @@ function ChatContent() {
               onClick={() => setNewChatOpen(false)}
               style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer' }}
             >
-              <span style={{ fontSize: 18, color: C.ink3, fontWeight: 700 }}>✕</span>
+              <span style={{ fontSize: 18, color: C.ink3, fontWeight: 700 }}>âœ•</span>
             </button>
 
             <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 700, color: C.ink }}>Start a conversation</h3>
