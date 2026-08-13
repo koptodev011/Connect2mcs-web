@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { C, F } from '@/lib/tokens';
 import Icon from '@/components/Icon';
@@ -8,6 +8,8 @@ import { Card, useGlobalToast } from '@/components/primitives';
 import { OrnamentDivider } from '@/components/Ornament';
 
 type Step = 'personal' | 'role' | 'verify' | 'password';
+
+type LocationOption = { id: string; name: string };
 
 const steps: { key: Step; label: string; marathi: string }[] = [
   { key: 'personal', label: 'Personal', marathi: 'वैयक्तिक' },
@@ -46,6 +48,12 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [residency, setResidency] = useState('');
+  const [countryId, setCountryId] = useState('');
+  const [cityId, setCityId] = useState('');
+  const [countries, setCountries] = useState<LocationOption[]>([]);
+  const [cities, setCities] = useState<LocationOption[]>([]);
+  const [countriesLoading, setCountriesLoading] = useState(true);
+  const [citiesLoading, setCitiesLoading] = useState(false);
   const [userType, setUserType] = useState('');
   const [entType, setEntType] = useState('');
   const [bizName, setBizName] = useState('');
@@ -57,6 +65,46 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/data/countries', { cache: 'no-store' })
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to load countries');
+        return response.json();
+      })
+      .then(data => {
+        if (active) setCountries(Array.isArray(data) ? data : []);
+      })
+      .catch(error => {
+        console.error('Could not load registration countries:', error);
+      })
+      .finally(() => {
+        if (active) setCountriesLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!countryId) return;
+
+    let active = true;
+    fetch(`/api/v1/models/C_City?countryId=${encodeURIComponent(countryId)}`, { cache: 'no-store' })
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to load cities');
+        return response.json();
+      })
+      .then(data => {
+        if (active) setCities(Array.isArray(data.records) ? data.records : []);
+      })
+      .catch(error => {
+        console.error('Could not load registration cities:', error);
+      })
+      .finally(() => {
+        if (active) setCitiesLoading(false);
+      });
+    return () => { active = false; };
+  }, [countryId]);
 
   const stepIndex = steps.findIndex(s => s.key === step);
 
@@ -81,6 +129,8 @@ export default function RegisterPage() {
     if (!phone.trim() || phone.trim().length < 10) { triggerError('Please enter a valid phone number.'); return; }
     if (!email.trim() || !email.includes('@')) { triggerError('Please enter a valid email address.'); return; }
     if (!residency) { triggerError('Please select your residency type.'); return; }
+    if (!countryId) { triggerError('Please select your country.'); return; }
+    if (!cityId) { triggerError('Please select your city.'); return; }
     goNext();
   };
 
@@ -119,7 +169,7 @@ export default function RegisterPage() {
     if (password !== confirmPassword) { triggerError('Passwords do not match.'); return; }
     setLoading(true);
     try {
-      const body: Record<string, any> = {
+      const body: Record<string, unknown> = {
         firstName: firstName.trim(),
         email: email.trim(),
         phone: phone.trim(),
@@ -127,6 +177,8 @@ export default function RegisterPage() {
         password: password.trim(),
         userType,
         residencyType: residency,
+        countryId,
+        cityId,
       };
       if (userType === 'Entrepreneur') {
         body.entType = entType;
@@ -292,6 +344,63 @@ export default function RegisterPage() {
                 <Icon name="book" size={16} color={C.ink3} />
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                   placeholder="your@email.com" style={inputStyle()} />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 12.5, fontWeight: 700, color: C.ink2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Country
+                </label>
+                <div style={fieldContainer(false)}>
+                  <Icon name="globe" size={16} color={C.ink3} />
+                  <select
+                    value={countryId}
+                    onChange={event => {
+                      setCountryId(event.target.value);
+                      setCityId('');
+                      setCities([]);
+                      setCitiesLoading(Boolean(event.target.value));
+                    }}
+                    disabled={countriesLoading}
+                    style={{
+                      ...inputStyle(),
+                      width: '100%', minWidth: 0, appearance: 'none',
+                      color: countryId ? C.ink : C.ink3,
+                      cursor: countriesLoading ? 'wait' : 'pointer',
+                    }}
+                  >
+                    <option value="">{countriesLoading ? 'Loading...' : 'Select country'}</option>
+                    {countries.map(country => <option key={country.id} value={country.id}>{country.name}</option>)}
+                  </select>
+                  <Icon name="chev" size={16} color={C.ink3} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 12.5, fontWeight: 700, color: C.ink2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  City
+                </label>
+                <div style={fieldContainer(false)}>
+                  <Icon name="map" size={16} color={C.ink3} />
+                  <select
+                    value={cityId}
+                    onChange={event => setCityId(event.target.value)}
+                    disabled={!countryId || citiesLoading}
+                    style={{
+                      ...inputStyle(),
+                      width: '100%', minWidth: 0, appearance: 'none',
+                      color: cityId ? C.ink : C.ink3,
+                      cursor: !countryId || citiesLoading ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    <option value="">
+                      {citiesLoading ? 'Loading...' : countryId ? 'Select city' : 'Select country first'}
+                    </option>
+                    {cities.map(city => <option key={city.id} value={city.id}>{city.name}</option>)}
+                  </select>
+                  <Icon name="chev" size={16} color={!countryId ? C.line : C.ink3} />
+                </div>
               </div>
             </div>
 

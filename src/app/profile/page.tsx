@@ -12,6 +12,7 @@ import { signOut } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 
 type Tab = 'overview' | 'edit' | 'preferences';
+type LocationOption = { id: string; name: string };
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -144,7 +145,7 @@ export default function ProfilePage() {
       </div>
 
       {tab === 'overview' && <Overview me={me} />}
-      {tab === 'edit' && <EditPanel me={me} />}
+      {tab === 'edit' && <EditPanel me={me} onSaved={changes => setMe(current => current ? { ...current, ...changes } : current)} />}
       {tab === 'preferences' && <PreferencesPanel/>}
     </div>
   );
@@ -244,7 +245,74 @@ function Overview({ me }: { me: CurrentUser }) {
   );
 }
 
-function EditPanel({ me }: { me: CurrentUser }) {
+function EditPanel({ me, onSaved }: { me: CurrentUser; onSaved: (changes: Partial<CurrentUser>) => void }) {
+  const [countries, setCountries] = useState<LocationOption[]>([]);
+  const [cities, setCities] = useState<LocationOption[]>([]);
+  const [countryId, setCountryId] = useState(me.countryId || '');
+  const [cityId, setCityId] = useState(me.cityId || '');
+  const [locationsLoading, setLocationsLoading] = useState(true);
+  const [citiesLoading, setCitiesLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const toast = useGlobalToast();
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/api/data/countries', { signal: controller.signal, cache: 'no-store' })
+      .then(response => response.ok ? response.json() : Promise.reject(new Error('Could not load countries')))
+      .then((records: LocationOption[]) => {
+        const options = (Array.isArray(records) ? records : []).map(country => ({ ...country, id: String(country.id) }));
+        const savedCountryId = String(me.countryId || '');
+        const matchedCountryId = options.find(country => country.name.trim().toLowerCase() === me.country.trim().toLowerCase())?.id || '';
+        setCountries(options);
+        setCountryId(savedCountryId || matchedCountryId);
+      })
+      .catch(error => { if (!(error instanceof DOMException && error.name === 'AbortError')) console.error('Unable to load countries:', error); })
+      .finally(() => setLocationsLoading(false));
+    return () => controller.abort();
+  }, [me.country, me.countryId]);
+
+  useEffect(() => {
+    if (!countryId) { setCities([]); return; }
+    const controller = new AbortController();
+    setCitiesLoading(true);
+    fetch(`/api/v1/models/C_City?countryId=${encodeURIComponent(countryId)}`, { signal: controller.signal, cache: 'no-store' })
+      .then(response => response.ok ? response.json() : Promise.reject(new Error('Could not load cities')))
+      .then((payload: { records?: LocationOption[] }) => {
+        const options = (Array.isArray(payload.records) ? payload.records : []).map(city => ({ ...city, id: String(city.id) }));
+        const savedCityId = String(me.cityId || '');
+        const matchedCityId = options.find(city => city.name.trim().toLowerCase() === me.city.trim().toLowerCase())?.id || '';
+        setCities(options);
+        setCityId(current => current || savedCityId || matchedCityId);
+      })
+      .catch(error => { if (!(error instanceof DOMException && error.name === 'AbortError')) { console.error('Unable to load cities:', error); setCities([]); } })
+      .finally(() => setCitiesLoading(false));
+    return () => controller.abort();
+  }, [countryId, me.city, me.cityId]);
+  async function saveLocation() {
+    if (!countryId || !cityId) { toast.add('Please select country and city.', 'error'); return; }
+    try {
+      const savedUser = JSON.parse(localStorage.getItem('mcs_user') || '{}');
+      const token = localStorage.getItem('mcs_token') || '';
+      if (!savedUser.id || !token) throw new Error('Please sign in again.');
+      setSaving(true);
+      const response = await fetch(`/api/v1/models/ad_user/${encodeURIComponent(savedUser.id)}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ C_Country_ID: Number(countryId), C_City_ID: Number(cityId) }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Could not update location.');
+      const country = countries.find(option => String(option.id) === countryId)?.name || '';
+      const city = cities.find(option => String(option.id) === cityId)?.name || '';
+      localStorage.setItem('mcs_user', JSON.stringify({ ...savedUser, country, countryId, city, cityId }));
+      window.dispatchEvent(new Event('mcs_auth_change'));
+      onSaved({ country, countryId, city, cityId });
+      toast.add('Location updated successfully.', 'success');
+    } catch (error) {
+      toast.add(error instanceof Error ? error.message : 'Could not update location.', 'error');
+    } finally { setSaving(false); }
+  }
+
   return (
     <Card pad={28}>
       <div className="mob-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 22, maxWidth: 720 }}>
@@ -252,8 +320,8 @@ function EditPanel({ me }: { me: CurrentUser }) {
         <Field label="Marathi name" value={me.marathi} deva/>
         <Field label="Email" value={me.email}/>
         <Field label="Phone" value={me.phone}/>
-        <Field label="City" value={me.city}/>
-        <Field label="Country" value={me.country}/>
+        <SelectField label="Country" value={countryId} disabled={locationsLoading} placeholder={locationsLoading ? 'Loading countries...' : 'Select country'} options={countries} onChange={value => { setCountryId(value); setCityId(''); }}/>
+        <SelectField label="City" value={cityId} disabled={!countryId || citiesLoading} placeholder={citiesLoading ? 'Loading cities...' : countryId ? 'Select city' : 'Select country first'} options={cities} onChange={setCityId}/>
         <Field label="Origin" value={me.origin}/>
         <Field label="Mandal" value={me.mandal}/>
         <Field label="Member type" value={me.type}/>
@@ -262,11 +330,21 @@ function EditPanel({ me }: { me: CurrentUser }) {
         </div>
       </div>
       <div style={{ display: 'flex', gap: 10, marginTop: 26 }}>
-        <Btn kind="primary" size="md">Save changes</Btn>
+        <Btn kind="primary" size="md" onClick={saveLocation} disabled={saving || !countryId || !cityId}>{saving ? 'Saving...' : 'Save changes'}</Btn>
         <Btn kind="ghost" size="md">Cancel</Btn>
       </div>
     </Card>
   );
+}
+
+function SelectField({ label, value, options, placeholder, disabled, onChange }: { label: string; value: string; options: LocationOption[]; placeholder: string; disabled?: boolean; onChange: (value: string) => void }) {
+  return <label style={{ display: 'block' }}>
+    <div style={{ fontSize: 11.5, color: C.ink3, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>{label}</div>
+    <select value={value} disabled={disabled} onChange={event => onChange(event.target.value)} style={{ width: '100%', padding: '10px 14px', border: `1px solid ${C.lineMid}`, borderRadius: 10, fontSize: 14, fontWeight: 500, outline: 'none', fontFamily: 'inherit', background: disabled ? C.bgDeep : '#fff' }}>
+      <option value="">{placeholder}</option>
+      {options.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}
+    </select>
+  </label>;
 }
 
 function Field({ label, value, multiline, deva }: { label: string; value: string; multiline?: boolean; deva?: boolean }) {

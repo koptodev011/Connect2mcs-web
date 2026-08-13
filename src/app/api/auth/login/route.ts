@@ -55,10 +55,12 @@ export async function POST(request: Request) {
 
         const escapedUsername = String(username).replace(/'/g, "''");
         const filters = [`Name eq '${escapedUsername}'`, `Value eq '${escapedUsername}'`, `EMail eq '${escapedUsername}'`];
-        let erpUser: { id?: number | string; MCS_LoginType?: string | number | { id?: string | number; identifier?: string } } | null = null;
+        type ModelReference = { id?: string | number; identifier?: string };
+        type ErpUser = { id?: number | string; Name?: string; MCS_LoginType?: string | number | ModelReference; C_City_ID?: string | number | ModelReference; C_Country_ID?: string | number | ModelReference };
+        let erpUser: ErpUser | null = null;
         for (const filter of filters) {
           const userResponse = await fetch(`${API_URL}/models/AD_User?$filter=${encodeURIComponent(filter)}&$top=1`, { headers: { Authorization: `Bearer ${data.token}`, Accept: 'application/json' }, cache: 'no-store' });
-          if (userResponse.ok) { const payload = await userResponse.json() as { records?: Array<{ id?: number | string; MCS_LoginType?: string | number | { id?: string | number; identifier?: string } }> }; erpUser = payload.records?.[0] || null; if (erpUser) break; }
+          if (userResponse.ok) { const payload = await userResponse.json() as { records?: ErpUser[] }; erpUser = payload.records?.[0] || null; if (erpUser) break; }
         }
         const userId = Number(erpUser?.id) || null;
         const linkedProfileModels = [
@@ -91,7 +93,27 @@ export async function POST(request: Request) {
         const loginType = typeof loginTypeValue === 'object'
           ? String(loginTypeValue.id || loginTypeValue.identifier || '')
           : String(loginTypeValue || '');
-        const loginResponse = NextResponse.json({ success: true, token: data.token, user: { id: userId, name: username, city: 'Mumbai', avatar: initials, loginType, linkedProfileIds } });
+        const cityValue = erpUser?.C_City_ID;
+        const countryValue = erpUser?.C_Country_ID;
+        const city = typeof cityValue === 'object' ? String(cityValue.identifier || '') : '';
+        const cityId = typeof cityValue === 'object' ? String(cityValue.id || '') : String(cityValue || '');
+        const country = typeof countryValue === 'object' ? String(countryValue.identifier || '') : '';
+        const countryId = typeof countryValue === 'object' ? String(countryValue.id || '') : String(countryValue || '');
+        const loginResponse = NextResponse.json({
+          success: true,
+          token: data.token,
+          user: {
+            id: userId,
+            name: erpUser?.Name || username,
+            city,
+            cityId,
+            country,
+            countryId,
+            avatar: initials,
+            loginType,
+            linkedProfileIds,
+          },
+        });
         if (userId) loginResponse.cookies.set('mcs_favorite_user', signFavoriteUser(userId), { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 60 * 60 * 24 * 30 });
         return loginResponse;
       } else {

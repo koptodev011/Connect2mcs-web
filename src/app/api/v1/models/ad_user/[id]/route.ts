@@ -44,3 +44,31 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: 'Could not load user profile' }, { status: 500 });
   }
 }
+
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const token = bearerToken(request);
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { id } = await params;
+  if (!id || tokenUserId(token) !== String(id)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  try {
+    const input = await request.json() as Record<string, unknown>;
+    const countryId = Number(input.C_Country_ID);
+    const cityId = Number(input.C_City_ID);
+    if (!countryId || !cityId) return NextResponse.json({ error: 'Country and city are required' }, { status: 400 });
+
+    const response = await fetch(`${API_URL}/models/ad_user/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ C_Country_ID: countryId, C_City_ID: cityId }),
+      cache: 'no-store',
+    });
+    const text = await response.text();
+    if (!response.ok) return NextResponse.json({ error: 'Could not update user profile', detail: text }, { status: response.status });
+    return new NextResponse(text || JSON.stringify({ success: true }), { status: response.status, headers: { 'Content-Type': 'application/json' } });
+  } catch (error) {
+    console.error('Updating AD user failed:', error);
+    return NextResponse.json({ error: 'Could not update user profile' }, { status: 500 });
+  }
+}

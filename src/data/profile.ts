@@ -6,6 +6,8 @@ export interface CurrentUser {
   role: string;
   city: string;
   country: string;
+  countryId?: string;
+  cityId?: string;
   origin: string;
   type: string;
   mandal: string;

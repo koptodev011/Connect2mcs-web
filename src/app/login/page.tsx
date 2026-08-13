@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -54,6 +54,16 @@ export default function LoginPage() {
 
       // API login succeeded - save user details
       localStorage.setItem('mcs_user', JSON.stringify(apiData.user));
+      const userLocation = {
+        city: apiData.user.city || 'All',
+        cityId: String(apiData.user.cityId || ''),
+        country: apiData.user.country || 'All',
+        countryId: String(apiData.user.countryId || ''),
+      };
+      localStorage.setItem('mcs_location', JSON.stringify(userLocation));
+      document.cookie = `mcs_country=${encodeURIComponent(userLocation.country)}; path=/; max-age=31536000; SameSite=Lax`;
+      document.cookie = `mcs_country_id=${encodeURIComponent(userLocation.countryId)}; path=/; max-age=31536000; SameSite=Lax`;
+      window.dispatchEvent(new Event('mcs_location_change'));
       localStorage.setItem('MCS_LoginType', String(apiData.user.loginType || ''));
       const linkedProfileKeys = ['MCS_Maid_ID', 'MCS_Mentor_ID', 'MCS_TaxiDriver_ID', 'MCS_TiffinProvider_ID'];
       linkedProfileKeys.forEach((key) => {

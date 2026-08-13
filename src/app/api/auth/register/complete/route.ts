@@ -1,128 +1,155 @@
 import { NextResponse } from 'next/server';
 import { getAuthToken } from '@/lib/idempiere';
+import { idempiereSecureRequest } from '@/lib/idempiere-secure';
 
 const API_URL = process.env.IDEMPIERE_API_URL || 'http://15.207.222.86:8080/api/v1';
-const API_SECURE_URL = API_URL.replace('http://', 'https://').replace(':8080', ':8443');
+const API_SECURE_URL = process.env.IDEMPIERE_API_SECURE_URL
+  || API_URL.replace('http://', 'https://').replace(':8080', ':8443');
+const CLIENT_ID = Number(process.env.IDEMPIERE_CLIENT_ID) || 1000011;
+const ORG_ID = Number(process.env.IDEMPIERE_ORG_ID) || 0;
+const APP_USER_ROLE_ID = 1000031;
+
+type IdempiereResponse = {
+  id?: number;
+  summary?: string;
+  detail?: string;
+  message?: string;
+  isError?: boolean | string;
+};
+
+async function readResponse(response: Response): Promise<IdempiereResponse> {
+  const text = await response.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text) as IdempiereResponse;
+  } catch {
+    return { message: text };
+  }
+}
+
+function responseMessage(data: IdempiereResponse, fallback: string) {
+  return data.detail || data.message || data.summary || fallback;
+}
+
+function extractUserId(data: IdempiereResponse) {
+  if (typeof data.id === 'number') return data.id;
+  const match = data.summary?.match(/AD_User_ID:\s*(\d+)/i);
+  return match ? Number(match[1]) : null;
+}
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { 
-      firstName, email, phone, otp, password, 
-      userType, residencyType,
-      entType, businessName, businessDesc, businessEmail, businessPhone, businessWebsite 
+    const {
+      firstName, email, phone, otp, password, userType, residencyType,
+      countryId, cityId, entType, businessName, businessDesc, businessEmail, businessPhone, businessWebsite,
     } = body;
 
     if (!email || !firstName || !phone || !otp || !password || !userType || !residencyType) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    const normalizedEmail = String(email).trim().toLowerCase();
     const token = await getAuthToken();
-    const clientId = Number(process.env.IDEMPIERE_CLIENT_ID) || 11;
-    const orgId = Number(process.env.IDEMPIERE_ORG_ID) || 11;
+    const headers = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    };
 
-    // Build Description Field
-    let description = `User Type: ${userType}, Residency: ${residencyType}`;
-    if (userType === 'E' && entType) {
-      description += `, Ent Type: ${entType}`;
-      if (entType === 'Other') {
-        description += `\nBusiness: ${businessName || ''}\nDesc: ${businessDesc || ''}\nEmail: ${businessEmail || ''}\nPhone: ${businessPhone || ''}\nWebsite: ${businessWebsite || ''}`;
+    const otpRes = await fetch(`${API_URL}/processes/otpvalidationprocess`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ EMail: normalizedEmail, OTP: String(otp).trim(), ResetPassword: 'N' }),
+      cache: 'no-store',
+    });
+    const otpData = await readResponse(otpRes);
+    const otpFailed = !otpRes.ok || otpData.isError === true || String(otpData.isError).toLowerCase() === 'true';
+
+    if (otpFailed) {
+      const message = responseMessage(otpData, 'Invalid or expired OTP');
+      const alreadyExists = /failed to create user|already exist|already registered|user already/i.test(message);
+      return NextResponse.json(
+        { error: alreadyExists ? 'User already exists' : message },
+        { status: alreadyExists ? 409 : 400 },
+      );
+    }
+
+    const userId = extractUserId(otpData);
+    if (!userId) {
+      console.error('OTP validation did not return AD_User_ID:', otpData);
+      return NextResponse.json(
+        { error: 'OTP verified but the user account reference was not returned' },
+        { status: 502 },
+      );
+    }
+
+    let description: string | undefined;
+    if (userType === 'Entrepreneur' && entType) {
+      if (String(entType).toLowerCase() === 'other') {
+        description = [
+          'Entrepreneur Type: Other',
+          businessName && `Business Name: ${String(businessName).trim()}`,
+          businessDesc && `Business Description: ${String(businessDesc).trim()}`,
+          businessEmail && `Business Email: ${String(businessEmail).trim()}`,
+          businessPhone && `Business Phone: ${String(businessPhone).trim()}`,
+          businessWebsite && `Website/Link: ${String(businessWebsite).trim()}`,
+        ].filter(Boolean).join('\n');
+      } else {
+        description = `Entrepreneur Type: ${String(entType)
+          .split(' ')
+          .filter(Boolean)
+          .map((word) => word[0].toUpperCase() + word.slice(1))
+          .join(' ')}`;
       }
     }
 
-    // 1. Create User
-    const createUserBody = {
-      Name: firstName,
-      Description: description,
-      Phone2: phone,
-      EMail: email,
-      Value: email,
-      IsActive: true,
-      IsFullBPAccess: true,
-      AD_Client_ID: clientId,
-      AD_Org_ID: orgId
-    };
-
-    let userId = null;
-    const userRes = await fetch(`${API_URL}/models/AD_User`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+    const passwordRes = await idempiereSecureRequest<IdempiereResponse>(
+      `${API_SECURE_URL}/models/AD_User/${userId}`,
+      'PUT',
+      token,
+      {
+        Password: password,
+        Phone2: String(phone).trim(),
+        ...(Number(countryId) > 0 ? { C_Country_ID: Number(countryId) } : {}),
+        ...(Number(cityId) > 0 ? { C_City_ID: Number(cityId) } : {}),
+        ...(description ? { Description: description } : {}),
       },
-      body: JSON.stringify(createUserBody)
-    });
+    );
 
-    if (userRes.ok) {
-      const userData = await userRes.json();
-      userId = userData.id;
-    } else {
-      const err = await userRes.text();
-      console.error(`❌ User Creation Error:`, err);
-      return NextResponse.json({ error: 'Failed to create user account' }, { status: 500 });
+    if (!passwordRes.ok) {
+      console.error('Password/profile update failed:', passwordRes.data);
+      return NextResponse.json(
+        { error: responseMessage(passwordRes.data, 'Account created but failed to set password') },
+        { status: 502 },
+      );
     }
 
-    // 2. Verify OTP
-    const otpRes = await fetch(`${API_URL}/processes/otpvalidationprocess`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+    const userIdentifier = normalizedEmail.split('@')[0];
+    const roleRes = await idempiereSecureRequest<IdempiereResponse>(
+      `${API_SECURE_URL}/models/AD_User_Roles`,
+      'POST',
+      token,
+      {
+        AD_User_ID: { id: userId, identifier: userIdentifier, 'model-name': 'ad_user' },
+        AD_Role_ID: { id: APP_USER_ROLE_ID, identifier: 'App User', 'model-name': 'ad_role' },
+        AD_Client_ID: { id: CLIENT_ID, identifier: 'MCS Connect', 'model-name': 'ad_client' },
+        AD_Org_ID: { id: ORG_ID, identifier: '*', 'model-name': 'ad_org' },
+        IsActive: true,
+        'model-name': 'ad_user_roles',
       },
-      body: JSON.stringify({ Email: email, OTP: otp, Phone2: phone })
-    });
-
-    if (!otpRes.ok) {
-      // If OTP fails, we technically have a created user but unverified.
-      const err = await otpRes.text();
-      console.error(`❌ OTP Validation Error:`, err);
-      return NextResponse.json({ error: 'Invalid or expired OTP' }, { status: 400 });
-    }
-
-    // 3. Update Password
-    const pwRes = await fetch(`${API_SECURE_URL}/models/AD_User/${userId}`, {
-      method: 'PUT',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ Password: password })
-    });
-
-    if (!pwRes.ok) {
-      console.error(`❌ Password Update Error:`, await pwRes.text());
-      return NextResponse.json({ error: 'Account created but failed to set password. Please try resetting it.' }, { status: 500 });
-    }
-
-    // 4. Assign Role
-    const roleRes = await fetch(`${API_SECURE_URL}/models/AD_User_Roles`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        AD_User_ID: userId,
-        AD_Role_ID: 1000031,
-        AD_Client_ID: clientId,
-        AD_Org_ID: orgId,
-        Value: email
-      })
-    });
+    );
 
     if (!roleRes.ok) {
-      console.error(`❌ Role Assignment Error:`, await roleRes.text());
-      // Non-fatal error, user can still login technically
+      console.error('Role assignment failed:', roleRes.data);
     }
 
-    return NextResponse.json({ success: true, message: 'Registration complete' });
-
+    return NextResponse.json({ success: true, message: 'Registration complete', userId });
   } catch (error) {
-    console.error('❌ Complete Registration route error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Complete registration route error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 },
+    );
   }
 }
