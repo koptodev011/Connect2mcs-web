@@ -1,425 +1,598 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { C, F } from '@/lib/tokens';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Icon from '@/components/Icon';
-import { Btn, Card, Pill, Tag, Avatar, SectionHead, PageHeader, Rating, useGlobalToast } from '@/components/primitives';
-import { TaxiDriver, taxiCities, taxiSuggestions } from '@/data/taxi';
-import { toneBg, toneColor } from '@/lib/tones';
-import { BookModal, BecomeProviderModal, FilterModal, InfoModal } from '@/components/FormModals';
+import { useLocation } from '@/components/LocationContext';
+import { Avatar, Btn, Card, Field, Modal, PageHeader, Pill, Rating, SectionHead, Tag, useGlobalToast } from '@/components/primitives';
+import { drivers as fallbackDrivers, TaxiDriver } from '@/data/taxi';
+import styles from './page.module.css';
+
+type CityOption = { id: string; name: string };
+type LanguageOption = { code: string; name: string };
+type ModelRef = { id?: number | string; identifier?: string };
+interface ApiTaxiDriver {
+  id: number | string;
+  IsActive?: boolean;
+  MCS_Vehicle?: string;
+  MCS_VehicleType?: string;
+  MCS_Languages?: string;
+  AD_Language?: ModelRef | string;
+  MCS_ServiceAreas?: string;
+  Rate?: number;
+  MCS_BaseFare?: number;
+  Rating?: number;
+  Counter?: number;
+  IsAvailable?: boolean;
+  ContactDescription?: string;
+  C_City_ID?: ModelRef;
+  AD_User_ID?: ModelRef;
+}
+interface TaxiResponse {
+  records?: ApiTaxiDriver[];
+  'row-count'?: number;
+}
+interface RideForm { countryId: string; cityId: string; pickup: string; drop: string; passengers: string; tripDate: string; tripTime: string; userQuote: string; description: string }
+interface TaxiRequest { id: string; MCS_Pickup?: string; MCS_Drop?: string; MCS_TripDate?: string; MCS_TripStatus?: ModelRef | string; MCS_UserQuote?: number; MCS_PassengerCount?: number; AD_User_ID?: ModelRef }
+interface TaxiQuote { id: string; Name?: string; MCS_QuotedFare?: number | string; MCS_Status?: ModelRef | string; C_Currency_ID?: ModelRef; MCS_TaxiDriver_ID?: ModelRef; MCS_Taxi_Service_Request_ID?: ModelRef }
+const emptyRideForm: RideForm = { countryId: '', cityId: '', pickup: '', drop: '', passengers: '', tripDate: '', tripTime: '', userQuote: '', description: '' };
+const refId = (value?: ModelRef | string) => typeof value === 'object' && value ? String(value.id || '') : String(value || '');
+
+interface DriverForm {
+  vehicle: string;
+  vehicleType: string;
+  baseFare: string;
+  city: string;
+  serviceAreaIds: string[];
+  countryId: string;
+  cityId: string;
+  phone: string;
+  complementaryFood: string;
+  language: string;
+}
+
+const taxiTones: TaxiDriver['tone'][] = ['blue', 'brick', 'saffron', 'green', 'gold'];
+
+function toTaxiDriver(record: ApiTaxiDriver): TaxiDriver {
+  const parts = (record.ContactDescription || '')
+    .replace(/\u00c2\u00b7/g, '\u00b7')
+    .split('\u00b7')
+    .map(part => part.trim())
+    .filter(Boolean);
+  const hash = String(record.id).split('').reduce((total, character) => total + character.charCodeAt(0), 0);
+  return {
+    id: String(record.id),
+    name: record.AD_User_ID?.identifier || parts[0] || `Driver #${record.id}`,
+    city: record.C_City_ID?.identifier || parts[1] || 'City',
+    areas: record.MCS_ServiceAreas || parts[2] || 'Metro Area',
+    vehicle: record.MCS_Vehicle?.trim() || 'Sedan',
+    type: record.MCS_VehicleType || 'Standard',
+    langs: (typeof record.AD_Language === 'object' ? record.AD_Language.identifier : record.AD_Language || record.MCS_Languages)?.split(',').map(language => language.trim()).filter(Boolean) || ['Marathi', 'English'],
+    rate: record.Rate != null ? `$${record.Rate}/mi` : 'Standard',
+    base: record.MCS_BaseFare != null ? `$${record.MCS_BaseFare}` : '-',
+    rating: Number(record.Rating || 0),
+    trips: Number(record.Counter || 0),
+    available: record.IsAvailable !== false,
+    mandal: '-',
+    tone: taxiTones[hash % taxiTones.length],
+    since: '2022',
+    note: '',
+  };
+}
+
+const toneClasses: Record<string, string> = {
+  saffron: styles.toneSaffron,
+  brick: styles.toneBrick,
+  green: styles.toneGreen,
+  blue: styles.toneBlue,
+  gold: styles.toneGold,
+  pink: styles.tonePink,
+  sand: styles.toneSand,
+};
 
 export default function TaxiPage() {
+  const router = useRouter();
+  const { location } = useLocation();
   const [driversData, setDriversData] = useState<TaxiDriver[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch('/api/data/taxi')
-      .then(res => res.json())
-      .then(data => {
-        setDriversData(Array.isArray(data) ? data : []);
-        setLoading(false);
-      })
-      .catch(console.error);
-  }, []);
-
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeCity, setActiveCity] = useState('All cities');
   const [contacted, setContacted] = useState<Set<string>>(new Set());
-  const [pickup, setPickup] = useState('Boston, MA');
-  const [destination, setDestination] = useState('');
-  const [when, setWhen] = useState('Now');
-  const [date, setDate] = useState('Today');
-  const [searched, setSearched] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [bookOpen, setBookOpen] = useState(false);
-  const [registerOpen, setRegisterOpen] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [infoOpen, setInfoOpen] = useState(false);
-  const [selectedDriver, setSelectedDriver] = useState('');
   const [sortBy, setSortBy] = useState('Rating');
+  const [bookOpen, setBookOpen] = useState(false);
+  const [rideForm, setRideForm] = useState<RideForm>(emptyRideForm);
+  const [submittingRide, setSubmittingRide] = useState(false);
+  const [tripsOpen, setTripsOpen] = useState(false);
+  const [requests, setRequests] = useState<TaxiRequest[]>([]);
+  const [quotes, setQuotes] = useState<TaxiQuote[]>([]);
+  const [flowLoading, setFlowLoading] = useState(false);
+  const [driverRequestsOpen, setDriverRequestsOpen] = useState(false);
+  const [incomingRequests, setIncomingRequests] = useState<TaxiRequest[]>([]);
+  const [completedTrips, setCompletedTrips] = useState<TaxiRequest[]>([]);
+  const [completedTripsOpen, setCompletedTripsOpen] = useState(false);
+  const [driverRequestsLoading, setDriverRequestsLoading] = useState(false);
+  const [quoteFare, setQuoteFare] = useState<Record<string, string>>({});
+  const [quoteSending, setQuoteSending] = useState<string | null>(null);
+  const [selectedDriver, setSelectedDriver] = useState<TaxiDriver | null>(null);
+  const [confirmedBooking, setConfirmedBooking] = useState<{ quote: TaxiQuote; request?: TaxiRequest } | null>(null);
+  const [cities, setCities] = useState<CityOption[]>([]);
+  const [cityModalOpen, setCityModalOpen] = useState(false);
+  const [citySearch, setCitySearch] = useState('');
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const [registering, setRegistering] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [hasTaxiDriverProfile, setHasTaxiDriverProfile] = useState(false);
+  const [driverForm, setDriverForm] = useState<DriverForm>({ vehicle: '', vehicleType: '', baseFare: '', city: '', serviceAreaIds: [], countryId: '', cityId: '', phone: '', complementaryFood: '', language: '' });
+  const [registrationCountries, setRegistrationCountries] = useState<CityOption[]>([]);
+  const [requestCities, setRequestCities] = useState<CityOption[]>([]);
+  const [registrationCities, setRegistrationCities] = useState<CityOption[]>([]);
+  const [registrationLanguages, setRegistrationLanguages] = useState<LanguageOption[]>([]);
+  const [registrationLocationsLoading, setRegistrationLocationsLoading] = useState(false);
+  const toast = useGlobalToast();
+  const getUserId = () => {
+    try { return Number(JSON.parse(localStorage.getItem('mcs_user') || '{}').id) || 0 } catch { return 0 }
+  };
+
+  useEffect(() => {
+    const updateTaxiDriverProfile = () => {
+      try {
+        const user = JSON.parse(localStorage.getItem('mcs_user') || '{}') as { linkedProfileIds?: Record<string, string> };
+        setHasTaxiDriverProfile(Boolean(localStorage.getItem('MCS_TaxiDriver_ID') || user.linkedProfileIds?.MCS_TaxiDriver_ID));
+      } catch {
+        setHasTaxiDriverProfile(Boolean(localStorage.getItem('MCS_TaxiDriver_ID')));
+      }
+    };
+    updateTaxiDriverProfile();
+    window.addEventListener('storage', updateTaxiDriverProfile);
+    window.addEventListener('mcs_auth_change', updateTaxiDriverProfile);
+    window.addEventListener('focus', updateTaxiDriverProfile);
+    return () => {
+      window.removeEventListener('storage', updateTaxiDriverProfile);
+      window.removeEventListener('mcs_auth_change', updateTaxiDriverProfile);
+      window.removeEventListener('focus', updateTaxiDriverProfile);
+    };
+  }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadDrivers() {
+      try {
+        setLoading(true);
+        setLoadError(null);
+        const response = await fetch('/api/v1/models/MCS_TaxiDriver?top=100&_=' + Date.now(), {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Taxi API returned ${response.status}`);
+        }
+
+        const data = await response.json() as TaxiResponse;
+        const records = (data.records || [])
+          .filter(record => record.IsActive !== false)
+          .map(toTaxiDriver);
+        setDriversData(records);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+
+        console.error('Unable to load taxi drivers:', error);
+        setDriversData(fallbackDrivers);
+        setLoadError('Live driver data is temporarily unavailable. Showing saved driver information.');
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadDrivers();
+    return () => controller.abort();
+  }, [location.country, location.countryId, refreshKey]);
+
+  useEffect(() => {
+    setActiveCity('All cities');
+    setCitySearch('');
+    if (location.country === 'All' || !location.countryId) {
+      setCities([]);
+      return;
+    }
+    const controller = new AbortController();
+    fetch('/api/v1/models/C_City?countryId=' + encodeURIComponent(location.countryId), { cache: 'no-store', signal: controller.signal })
+      .then(response => {
+        if (!response.ok) throw new Error('City API returned ' + response.status);
+        return response.json();
+      })
+      .then(data => setCities(Array.isArray(data.records) ? data.records : []))
+      .catch(error => {
+        if (!controller.signal.aborted) {
+          console.error('Unable to load cities:', error);
+          setCities([]);
+        }
+      });
+    return () => controller.abort();
+  }, [location.country, location.countryId]);
+
+  useEffect(() => {
+    if ((!registerOpen && !bookOpen) || registrationCountries.length > 0) return;
+    const controller = new AbortController();
+    setRegistrationLocationsLoading(true);
+    fetch('/api/data/countries', { signal: controller.signal })
+      .then(response => response.ok ? response.json() : Promise.reject(new Error('Countries request failed')))
+      .then((records: Array<{ id: string; name: string }>) => setRegistrationCountries(records.map(record => ({ id: String(record.id), name: record.name })).filter(record => record.name)))
+      .catch(error => {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) toast.add('Could not load countries.', 'error');
+      })
+      .finally(() => setRegistrationLocationsLoading(false));
+    return () => controller.abort();
+  }, [bookOpen, registerOpen, registrationCountries.length]);
+
+  useEffect(() => {
+    if (!bookOpen || !rideForm.countryId) {
+      setRequestCities([]);
+      return;
+    }
+    const controller = new AbortController();
+    fetch('/api/v1/models/C_City?countryId=' + encodeURIComponent(rideForm.countryId), { signal: controller.signal, cache: 'no-store' })
+      .then(response => response.ok ? response.json() : Promise.reject(new Error('Cities request failed')))
+      .then((data: { records?: CityOption[] }) => setRequestCities(data.records || []))
+      .catch(error => {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) toast.add('Could not load cities.', 'error');
+      });
+    return () => controller.abort();
+  }, [bookOpen, rideForm.countryId]);
+
+  useEffect(() => {
+    if (!registerOpen || registrationLanguages.length > 0) return;
+    const controller = new AbortController();
+    fetch('/api/v1/models/AD_Language', { signal: controller.signal, cache: 'no-store' })
+      .then(response => response.ok ? response.json() : Promise.reject(new Error('Languages request failed')))
+      .then((data: { records?: LanguageOption[] }) => setRegistrationLanguages(data.records || []))
+      .catch(error => {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) toast.add('Could not load languages.', 'error');
+      });
+    return () => controller.abort();
+  }, [registerOpen, registrationLanguages.length]);
+  useEffect(() => {
+    if (!driverForm.countryId) {
+      setRegistrationCities([]);
+      return;
+    }
+    const controller = new AbortController();
+    setRegistrationLocationsLoading(true);
+    fetch('/api/v1/models/C_City?countryId=' + encodeURIComponent(driverForm.countryId), { signal: controller.signal })
+      .then(response => response.ok ? response.json() : Promise.reject(new Error('Cities request failed')))
+      .then((data: { records?: CityOption[] }) => setRegistrationCities(data.records || []))
+      .catch(error => {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) toast.add('Could not load cities.', 'error');
+      })
+      .finally(() => setRegistrationLocationsLoading(false));
+    return () => controller.abort();
+  }, [driverForm.countryId]);
+  const openRegistration = () => {
+    if (hasTaxiDriverProfile) return;
+    let userId = 0;
+    try { userId = Number(JSON.parse(localStorage.getItem('mcs_user') || '{}').id) || 0; } catch {}
+    if (!userId) {
+      toast.add('Please sign in before becoming a taxi driver.', 'error');
+      return;
+    }
+    setDriverForm(current => ({
+      ...current,
+      countryId: current.countryId || location.countryId || '',
+      city: current.city || (location.city !== 'All' ? location.city : ''),
+    }));
+    setRegisterOpen(true);
+  };
+
+  const registerDriver = async () => {
+    if (!driverForm.vehicle.trim() || !driverForm.vehicleType.trim() || !driverForm.countryId || !driverForm.cityId || !driverForm.phone.trim() || !driverForm.language.trim() || driverForm.serviceAreaIds.length === 0) {
+      toast.add('Complete all required driver fields.', 'error');
+      return;
+    }
+    setRegistering(true);
+    try {
+      const response = await fetch('/api/v1/models/MCS_TaxiDriver', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          MCS_Vehicle: driverForm.vehicle.trim(),
+          MCS_VehicleType: driverForm.vehicleType.trim(),
+          MCS_BaseFare: Number(driverForm.baseFare),
+          C_Country_ID: Number(driverForm.countryId),
+          C_City_ID: Number(driverForm.cityId),
+          Phone: driverForm.phone.trim(),
+          MCS_ComplementoryFood: driverForm.complementaryFood.trim(),
+          AD_Language: driverForm.language.trim(),
+          MCS_ServiceAreas: driverForm.serviceAreaIds.map(Number),
+          serviceAreaNames: registrationCities.filter(city => driverForm.serviceAreaIds.includes(city.id)).map(city => city.name),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not register taxi driver');
+      const createdDriverId = String(data.id || data.MCS_TaxiDriver_ID || 'registered');
+      localStorage.setItem('MCS_TaxiDriver_ID', createdDriverId);
+      try {
+        const savedUser = JSON.parse(localStorage.getItem('mcs_user') || '{}');
+        localStorage.setItem('mcs_user', JSON.stringify({ ...savedUser, linkedProfileIds: { ...savedUser.linkedProfileIds, MCS_TaxiDriver_ID: createdDriverId } }));
+      } catch {}
+      setHasTaxiDriverProfile(true);
+      setRegisterOpen(false);
+      setDriverForm({ vehicle: '', vehicleType: '', baseFare: '', city: '', serviceAreaIds: [], countryId: '', cityId: '', phone: '', complementaryFood: '', language: '' });
+      setRefreshKey(current => current + 1);
+      toast.add('Taxi driver profile submitted for verification.', 'success');
+    } catch (error) {
+      toast.add(error instanceof Error ? error.message : 'Could not register taxi driver', 'error');
+    } finally {
+      setRegistering(false);
+    }
+  };
+  const loadTaxiFlow = async () => {
+    setFlowLoading(true);
+    try {
+      const [requestResponse, quoteResponse] = await Promise.all([
+fetch(`/api/v1/models/MCS_Taxi_Service_Request?userId=${getUserId()}`, { cache: 'no-store' }),
+fetch(`/api/v1/models/MCS_Taxi_Service_Quote?userId=${getUserId()}`, { cache: 'no-store' }),
+      ]);
+      const [requestData, quoteData] = await Promise.all([requestResponse.json(), quoteResponse.json()]);
+      if (!requestResponse.ok) throw new Error(requestData.error || 'Could not load taxi requests');
+      if (!quoteResponse.ok) throw new Error(quoteData.error || 'Could not load taxi quotes');
+      setRequests(requestData.records || []); setQuotes(quoteData.records || []);
+    } catch (error) { toast.add(error instanceof Error ? error.message : 'Could not load taxi activity', 'error'); }
+    finally { setFlowLoading(false); }
+  };
+  const openTrips = () => { setTripsOpen(true); void loadTaxiFlow(); };
+  const openTaxiChat = (name: string, context?: { requestId?: string; quoteId?: string; fare?: number | string }) => {
+    if (!name.trim()) { toast.add('Chat contact is unavailable.', 'error'); return; }
+    const params = new URLSearchParams({ user: name.trim() });
+    if (context?.requestId) params.set('taxiRequestId', context.requestId);
+    if (context?.quoteId) params.set('taxiQuoteId', context.quoteId);
+    if (context?.fare != null) params.set('taxiFare', String(context.fare));
+    router.push(`/chat?${params.toString()}`);
+  };
+  const openCompletedTrips = async () => {
+    setCompletedTripsOpen(true); setDriverRequestsLoading(true);
+    try {
+      const response = await fetch(`/api/v1/models/MCS_Taxi_Service_Request?scope=completed&userId=${getUserId()}`, { cache: 'no-store' });
+      const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not load completed trips');
+      setCompletedTrips(data.records || []);
+    } catch (error) { toast.add(error instanceof Error ? error.message : 'Could not load completed trips', 'error'); }
+    finally { setDriverRequestsLoading(false); }
+  };  const openDriverRequests = async () => {
+    setDriverRequestsOpen(true); setDriverRequestsLoading(true);
+    try {
+const response = await fetch(`/api/v1/models/MCS_Taxi_Service_Request?scope=driver&userId=${getUserId()}`, { cache: 'no-store' });
+      const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not load ride requests');
+      setIncomingRequests((data.records || []).filter((request: TaxiRequest) => (refId(request.MCS_TripStatus) || 'O') === 'O'));
+    } catch (error) { toast.add(error instanceof Error ? error.message : 'Could not load ride requests', 'error'); }
+    finally { setDriverRequestsLoading(false); }
+  };
+  const sendQuote = async (requestId: string) => {
+    const fare = Number(quoteFare[requestId]); if (!Number.isFinite(fare) || fare <= 0) { toast.add('Enter a valid fare.', 'error'); return; }
+    setQuoteSending(requestId);
+    try {
+      const response = await fetch('/api/v1/models/MCS_Taxi_Service_Quote', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: getUserId(), requestId, MCS_QuotedFare: fare, Description: 'Taxi quote created from web' }) });
+      const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not send quote');
+      setIncomingRequests(current => current.filter(request => String(request.id) !== requestId));
+      toast.add('Quote sent to the passenger.', 'success');
+    } catch (error) { toast.add(error instanceof Error ? error.message : 'Could not send quote', 'error'); }
+    finally { setQuoteSending(null); }
+  };
+  const submitRide = async () => {
+    if (!rideForm.countryId || !rideForm.cityId || !rideForm.pickup.trim() || !rideForm.drop.trim() || !rideForm.tripDate || !rideForm.tripTime || !Number(rideForm.passengers)) { toast.add('Complete all taxi request fields.', 'error'); return; }
+    setSubmittingRide(true);
+    try {
+      const tripDateTime = new Date(`${rideForm.tripDate}T${rideForm.tripTime}`);
+      const response = await fetch('/api/v1/models/MCS_Taxi_Service_Request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: getUserId(), MCS_Pickup: rideForm.pickup.trim(), MCS_Drop: rideForm.drop.trim(), MCS_PassengerCount: Number(rideForm.passengers), MCS_TripDate: tripDateTime.toISOString(), MCS_UserQuote: Number(rideForm.userQuote || 0), Description: rideForm.description.trim(), C_Country_ID: Number(rideForm.countryId), C_City_ID: Number(rideForm.cityId) }) });
+      const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not request taxi');
+      setRideForm(emptyRideForm); setBookOpen(false); toast.add('Taxi request sent to available drivers.', 'success');
+    } catch (error) { toast.add(error instanceof Error ? error.message : 'Could not request taxi', 'error'); } finally { setSubmittingRide(false); }
+  };
+  const acceptQuote = async (quote: TaxiQuote) => {
+    try {
+      const response = await fetch('/api/v1/models/MCS_Taxi_Service_Request', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: getUserId(), id: refId(quote.MCS_Taxi_Service_Request_ID), MCS_TripStatus: 'A', MCS_UserQuote: Number(quote.MCS_QuotedFare || 0), quoteId: quote.id }) });
+      const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not accept quote');
+      const bookingRequest = requests.find(request => String(request.id) === refId(quote.MCS_Taxi_Service_Request_ID));
+      setConfirmedBooking({ quote, request: bookingRequest });
+      setTripsOpen(false); toast.add('Quote accepted. Your booking is confirmed.', 'success'); void loadTaxiFlow();
+    } catch (error) { toast.add(error instanceof Error ? error.message : 'Could not accept quote', 'error'); }
+  };
+  const driverCities = useMemo(() => Array.from(new Set(
+    driversData.map(driver => driver.city).filter(city => city && city !== 'City'),
+  )).sort((first, second) => first.localeCompare(second)), [driversData]);
+  const taxiCities = location.country === 'All' ? ['All cities'] : ['All cities', ...cities.map(city => city.name)];
+  const modalCities = (location.country === 'All' ? driverCities : cities.map(city => city.name))
+    .filter(city => city.toLowerCase().includes(citySearch.trim().toLowerCase()));
+  const selectCity = (city: string) => {
+    setActiveCity(city);
+    setCityModalOpen(false);
+    setCitySearch('');
+  };
 
   const filtered = activeCity === 'All cities'
     ? driversData
-    : driversData.filter(d => d.city === activeCity);
+    : driversData.filter(driver => driver.city === activeCity);
 
-  const sortedDrivers = [...filtered].sort((a, b) => {
-    if (sortBy === 'Rating') return b.rating - a.rating;
-    if (sortBy === 'Trips') return b.trips - a.trips;
+  const sortedDrivers = [...filtered].sort((first, second) => {
+    if (sortBy === 'Rating') return second.rating - first.rating;
+    if (sortBy === 'Trips') return second.trips - first.trips;
     return 0;
   });
 
-  const availableCount = filtered.filter(d => d.available).length;
-
-  function handleSearch() {
-    if (destination.trim() && pickup.trim()) {
-      setSearched(true);
-      setShowSuggestions(false);
-    }
-  }
-
-  function handleSwap() {
-    const temp = pickup;
-    setPickup(destination);
-    setDestination(temp);
-  }
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+    <div className={styles.page}>
       <PageHeader
         title="NRI Taxi"
         marathi="टॅक्सी"
         subtitle={`${loading ? '...' : driversData.length} community drivers · vetted by Mandal network · book directly`}
         actions={<>
-          <Btn kind="ghost" size="md" iconL="filter" onClick={() => setFilterOpen(true)}>Filters</Btn>
-          <Btn kind="dark"  size="md" iconL="plus" onClick={() => setRegisterOpen(true)}>Register as driver</Btn>
+          {/* <Btn kind="ghost" size="md" iconL="filter" onClick={() => setCityModalOpen(true)}>Filters</Btn> */}
+          {/* <Btn kind="dark" size="md" iconL="plus" onClick={openRegistration}>Register as driver</Btn> */}
         </>}
       />
-
-      {/* Booking widget */}
-      <Card pad={0} style={{ overflow: 'visible', border: `1px solid ${C.line}`, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
-        {/* Widget header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.ink3, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>Plan your ride</div>
-            <div style={{ fontFamily: F.display, fontSize: 20, fontWeight: 600, color: C.ink, letterSpacing: '-0.02em' }}>
-              Where would you like to go?
-            </div>
-          </div>
-          <Tag color={C.green} bg={C.greenLt} style={{ fontSize: 11, fontWeight: 700 }}>
-            ● {availableCount} drivers online
-          </Tag>
-        </div>
-
-        <div style={{ padding: '20px 24px 22px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {/* Route inputs */}
-          <div className="mob-stack" style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 10, alignItems: 'center' }}>
-            {/* Pickup */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px',
-              background: C.bgDeep, borderRadius: 12, border: `1px solid ${C.line}`,
-            }}>
-              <div style={{
-                width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-                background: C.greenLt,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Icon name="pin" size={16} color={C.green}/>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: C.ink3, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 3 }}>Pickup</div>
-                <input
-                  value={pickup}
-                  onChange={e => setPickup(e.target.value)}
-                  placeholder="Pickup location"
-                  style={{
-                    border: 'none', background: 'transparent', outline: 'none',
-                    fontSize: 14, fontWeight: pickup ? 700 : 500,
-                    color: pickup ? C.ink : C.ink3,
-                    fontFamily: 'inherit', width: '100%',
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Swap button */}
-            <button style={{
-              width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-              background: '#fff', border: `1px solid ${C.line}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', fontSize: 16, color: C.ink3,
-              boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-            }} onClick={handleSwap}>
-              ⇄
-            </button>
-
-            {/* Destination */}
-            <div style={{ position: 'relative' }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px',
-                background: '#fff', borderRadius: 12,
-                border: `1.5px solid ${destination ? C.saffron : C.line}`,
-                boxShadow: destination ? `0 0 0 3px rgba(226,106,31,0.08)` : 'none',
-                transition: 'border-color 0.15s, box-shadow 0.15s',
-              }}>
-                <div style={{
-                  width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-                  background: destination ? '#FFE9D6' : C.bgDeep,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'background 0.15s',
-                }}>
-                  <Icon name="search" size={16} color={destination ? C.saffronDk : C.ink3}/>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: C.ink3, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 3 }}>Destination</div>
-                  <input
-                    value={destination}
-                    onChange={e => { setDestination(e.target.value); setSearched(false); setShowSuggestions(true); }}
-                    onFocus={() => setShowSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                    placeholder="Where to?"
-                    style={{
-                      border: 'none', background: 'transparent', outline: 'none',
-                      fontSize: 14, fontWeight: destination ? 700 : 500,
-                      color: destination ? C.ink : C.ink3,
-                      fontFamily: 'inherit', width: '100%',
-                    }}
-                  />
-                </div>
-                {destination && (
-                  <button
-                    onClick={() => { setDestination(''); setSearched(false); }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: C.ink3, fontSize: 16, lineHeight: 1, flexShrink: 0 }}
-                  >×</button>
-                )}
-              </div>
-
-              {/* Suggestions dropdown */}
-              {showSuggestions && (
-                <div style={{
-                  position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0,
-                  background: '#fff', border: `1px solid ${C.line}`,
-                  borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-                  overflow: 'hidden', zIndex: 20,
-                }}>
-                  <div style={{ padding: '10px 14px 6px', fontSize: 10, fontWeight: 700, color: C.ink3, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                    Popular destinations
-                  </div>
-                  {taxiSuggestions.map(s => (
-                    <button
-                      key={s}
-                      onMouseDown={() => { setDestination(s); setShowSuggestions(false); }}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        width: '100%', padding: '10px 14px', border: 'none',
-                        background: 'transparent', cursor: 'pointer', fontFamily: 'inherit',
-                        textAlign: 'left',
-                      }}
-                      className="nav-int"
-                    >
-                      <Icon name="pin" size={14} color={C.ink3}/>
-                      <span style={{ fontSize: 13.5, fontWeight: 600, color: C.ink }}>{s}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Date, time, CTA */}
-          <div className="mob-stack" style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 2 }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px',
-              background: C.bgDeep, borderRadius: 10, border: `1px solid ${C.line}`, flex: 1,
-            }}>
-              <Icon name="cal" size={15} color={C.ink3}/>
-              <select
-                value={date} onChange={e => setDate(e.target.value)}
-                style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 13, fontWeight: 600, color: C.ink, fontFamily: 'inherit', cursor: 'pointer', flex: 1 }}
-              >
-                <option>Today</option>
-                <option>Tomorrow</option>
-                <option>This weekend</option>
-              </select>
-            </div>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px',
-              background: C.bgDeep, borderRadius: 10, border: `1px solid ${C.line}`, flex: 1,
-            }}>
-              <Icon name="clock" size={15} color={C.ink3}/>
-              <select
-                value={when} onChange={e => setWhen(e.target.value)}
-                style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 13, fontWeight: 600, color: C.ink, fontFamily: 'inherit', cursor: 'pointer', flex: 1 }}
-              >
-                <option>Now</option>
-                <option>In 1 hour</option>
-                <option>Morning (6–10 AM)</option>
-                <option>Afternoon (12–4 PM)</option>
-                <option>Evening (5–9 PM)</option>
-              </select>
-            </div>
-            <Btn
-              kind={destination ? 'primary' : 'soft'}
-              size="md"
-              onClick={handleSearch}
-            >
-              {searched ? 'Update search' : 'Find drivers'}
-            </Btn>
-          </div>
-
-          {/* Search result banner */}
-          {searched && destination && (
-            <div className="mob-stack" style={{
-              display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
-              background: 'linear-gradient(90deg, #FFF8EB 0%, #FFF3E0 100%)',
-              border: `1px solid rgba(184,79,18,0.18)`, borderRadius: 10,
-              marginTop: 4,
-            }}>
-              <Icon name="verify" size={18} color={C.saffron}/>
-              <div style={{ flex: 1 }}>
-                <span style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>
-                  {pickup} → {destination}
-                </span>
-                <span style={{ fontSize: 13, color: C.ink2, fontWeight: 500, marginLeft: 8 }}>
-                  · {date.toLowerCase()} · {when.toLowerCase()}
-                </span>
-              </div>
-              <span style={{ fontSize: 12, fontWeight: 700, color: C.green }}>
-                {availableCount} drivers available
-              </span>
-            </div>
-          )}
-        </div>
-      </Card>
-
-      {/* Editorial banner */}
-      <div className="mob-stack" style={{
-        background: 'linear-gradient(110deg, #0F0E0C 0%, #3A342B 60%, #5A4A34 100%)',
-        borderRadius: 18, padding: '28px 36px', color: '#fff', position: 'relative', overflow: 'hidden',
-        display: 'grid', gridTemplateColumns: '1fr auto', gap: 32, alignItems: 'center',
-      }}>
-        <svg style={{ position: 'absolute', top: -30, right: -30, opacity: 0.1 }} width="260" height="260" viewBox="0 0 260 260" aria-hidden="true">
+      <div className={`${styles.hero} mob-stack`}>
+        <svg className={styles.heroDecoration} width="220" height="220" viewBox="0 0 220 220" aria-hidden="true">
           <g fill="none" stroke="#fff" strokeWidth="1">
-            <circle cx="130" cy="130" r="110"/><circle cx="130" cy="130" r="82"/><circle cx="130" cy="130" r="54"/>
+            <circle cx="110" cy="110" r="90" />
+            <circle cx="110" cy="110" r="66" />
+            <circle cx="110" cy="110" r="42" />
           </g>
         </svg>
-        <div style={{ position: 'relative' }}>
+
+        <div className={styles.heroContent}>
           <Tag color="#FFD89C" bg="rgba(255,216,156,0.15)">● Community-verified drivers</Tag>
-          <h2 style={{ margin: '12px 0 8px', fontFamily: F.display, fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.1 }}>
-            Ride with someone who speaks<br/>your language.
+          <h2 className={styles.heroTitle}>
+            Need a Trusted<br />community Taxi?
           </h2>
-          <p style={{ margin: 0, fontSize: 14, color: 'rgba(255,255,255,0.75)', fontWeight: 500, maxWidth: 520, lineHeight: 1.55 }}>
-            All drivers are Mandal-verified community members. Chat in Marathi, share the journey.
-          </p>
-        </div>
-        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 200 }}>
-          {[['🛬 Airport transfers','Fast & fixed rate'],['🏙️ City rides','Hourly & per mile'],['👨‍👩‍👧 Group travel','Minivans available']].map(([t, s], i) => (
-            <div key={i} style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 10, padding: '10px 14px', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>{t}</div>
-              <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.6)', fontWeight: 500, marginTop: 2 }}>{s}</div>
-            </div>
-          ))}
+
+          <div className={styles.heroActions}>
+            {hasTaxiDriverProfile ? <>
+              <Btn kind="primary" size="md" onClick={openDriverRequests}>Taxi Requests</Btn>
+              <Btn kind="soft" size="md" onClick={openCompletedTrips}>Completed Trips</Btn>
+            </> : <>
+              <Btn kind="primary" size="md" onClick={() => setBookOpen(true)}>Book a Taxi Now</Btn>
+              <Btn kind="soft" size="md" onClick={openTrips}>My Trips & Quotes</Btn>
+              <Btn kind="primary" size="md" onClick={openRegistration}>Become a Taxi Driver</Btn>
+            </>}
+          </div>
         </div>
       </div>
 
-      {/* City filter */}
-      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
-        {taxiCities.map(c => (
-          <Pill key={c} active={activeCity === c} onClick={() => setActiveCity(c)}>{c}</Pill>
+      <div className={styles.statsGrid}>
+        <div className={styles.statCard}><strong>{loading ? '...' : driversData.length}</strong><span>Trusted Drivers</span></div>
+        <div className={styles.statCard}><strong>{loading ? '...' : driversData.filter(driver => driver.available).length}</strong><span>Active Taxis</span></div>
+        <div className={styles.statCard}><strong>Verified</strong><span>Community Safety</span></div>
+      </div>
+
+      <div className={styles.cityFilters}>
+        {taxiCities.map(city => (
+          <Pill key={city} active={activeCity === city} onClick={() => {
+            if (location.country === 'All' && city === 'All cities') setCityModalOpen(true);
+            else setActiveCity(city);
+          }}>
+            {city}
+          </Pill>
         ))}
+        {location.country === 'All' && activeCity !== 'All cities' && (
+          <Pill active onClick={() => setCityModalOpen(true)}>{activeCity}</Pill>
+        )}
       </div>
 
-      {/* Driver grid */}
+      {cityModalOpen && (
+        <div className={styles.modalBackdrop} role="presentation" onMouseDown={() => setCityModalOpen(false)}>
+          <div className={styles.cityModal} role="dialog" aria-modal="true" aria-labelledby="taxi-city-title" onMouseDown={event => event.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <div><div id="taxi-city-title" className={styles.modalTitle}>Select a city</div><div className={styles.modalSubtitle}>Search cities with available taxi drivers</div></div>
+              <button type="button" className={styles.modalClose} aria-label="Close city selector" onClick={() => setCityModalOpen(false)}>&times;</button>
+            </div>
+            <input className={styles.citySearch} type="search" value={citySearch} onChange={event => setCitySearch(event.target.value)} placeholder="Search city..." autoFocus />
+            <div className={styles.cityList}>
+              <button type="button" className={styles.cityOption} onClick={() => selectCity('All cities')}>All cities</button>
+              {modalCities.map(city => <button type="button" className={styles.cityOption} key={city} onClick={() => selectCity(city)}>{city}</button>)}
+              {modalCities.length === 0 && <div className={styles.noCities}>No matching cities found</div>}
+            </div>
+          </div>
+        </div>
+      )}
+
       <section>
         <SectionHead
-          title={searched && destination ? `Drivers for your route` : 'Available drivers'}
-          subtitle={searched && destination
-            ? `${availableCount} available · ${pickup} → ${destination} · ${date.toLowerCase()}`
-            : `Showing ${filtered.length} driver${filtered.length === 1 ? '' : 's'} · ${activeCity}`}
+          title="Available drivers"
+subtitle={`Showing ${filtered.length} driver${filtered.length === 1 ? '' : 's'} ${'\u00b7'} ${activeCity}`}
           action={
             <select
               value={sortBy}
-              onChange={e => setSortBy(e.target.value)}
-              style={{
-                appearance: 'none', border: 'none', background: 'transparent',
-                fontSize: 13, fontWeight: 600, color: C.saffronDk, cursor: 'pointer', outline: 'none',
-                fontFamily: 'inherit', paddingRight: 4
-              }}
+              onChange={event => setSortBy(event.target.value)}
+              className={styles.sortSelect}
             >
               <option value="Rating">Sort: Rating</option>
               <option value="Trips">Sort: Trips</option>
             </select>
           }
         />
+
+        {loadError && <div className={styles.loadWarning} role="status">{loadError}</div>}
+
         {loading ? (
-          <div style={{ padding: '40px 24px', textAlign: 'center', color: C.ink3, fontSize: 13 }}>
-            Loading drivers from iDempiere...
-          </div>
+          <div className={styles.statusMessage}>Loading drivers from iDempiere...</div>
         ) : filtered.length === 0 ? (
-          <Card pad={32} style={{ textAlign: 'center' }}>
-            <div style={{ fontFamily: F.display, fontSize: 18, fontWeight: 600, color: C.ink }}>No drivers in this city yet</div>
-            <p style={{ margin: '8px 0 16px', fontSize: 13, color: C.ink3, fontWeight: 500 }}>Be the first to register.</p>
-            <Btn kind="primary" size="md" iconL="plus" onClick={() => setRegisterOpen(true)}>Register as driver</Btn>
+          <Card pad={32} className={styles.emptyCard}>
+            <div className={styles.emptyTitle}>No drivers in this city yet</div>
           </Card>
         ) : (
-          <div className="mob-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
-            {sortedDrivers.map((d, index) => {
-              const isContacted = contacted.has(d.id);
+          <div className={`${styles.driverGrid} mob-stack`}>
+            {sortedDrivers.map((driver, index) => {
+              const isContacted = contacted.has(driver.id);
+              const toneClass = toneClasses[driver.tone] ?? styles.toneSaffron;
+
               return (
-                <Card key={`${d.id}-${index}`} pad={0} style={{ overflow: 'hidden' }}>
-                  {/* Tone header strip */}
-                  <div style={{ height: 6, background: toneBg[d.tone], borderBottom: `1px solid ${toneColor[d.tone]}22` }}/>
-                  <div style={{ padding: '18px 18px 16px' }}>
-                    {/* Driver header */}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
-                      <div style={{ position: 'relative', flexShrink: 0 }}>
-                        <Avatar name={d.name} size={52} style={{ fontSize: 18 }}/>
-                        <span style={{
-                          position: 'absolute', bottom: 0, right: 0,
-                          width: 14, height: 14, borderRadius: '50%',
-                          background: d.available ? C.green : C.ink4,
-                          border: '2px solid #fff',
-                        }}/>
+                <Card key={`${driver.id}-${index}`} pad={0} className={styles.driverCard}>
+                  <div className={`${styles.toneStrip} ${toneClass}`} />
+
+                  <div className={styles.cardBody}>
+                    <div className={styles.driverHeader}>
+                      <div className={styles.avatarWrap}>
+                        <Avatar name={driver.name} size={52} />
+                        <span className={`${styles.availabilityDot} ${driver.available ? styles.available : ''}`} />
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: C.ink, lineHeight: 1.2 }}>{d.name}</div>
-                        <div style={{ fontSize: 11.5, color: C.ink3, fontWeight: 500, marginTop: 2 }}>
-                          {d.city} · {d.mandal}
-                        </div>
-                        <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Rating value={d.rating}/>
-                          <span style={{ fontSize: 11.5, color: C.ink3, fontWeight: 500 }}>{d.trips.toLocaleString()} trips</span>
+
+                      <div className={styles.driverInfo}>
+                        <div className={styles.driverName}>{driver.name}</div>
+                        <div className={styles.driverMeta}>{driver.city}</div>
+                        <div className={styles.ratingRow}>
+                          <Rating value={driver.rating} />
+                          <span className={styles.tripCount}>{driver.trips.toLocaleString()} trips</span>
                         </div>
                       </div>
-                      <div style={{
-                        fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
-                        padding: '4px 8px', borderRadius: 999,
-                        background: d.available ? C.greenLt : C.bgDeep,
-                        color: d.available ? C.green : C.ink4,
-                      }}>
-                        {d.available ? '● ONLINE' : '○ OFFLINE'}
-                      </div>
+
+
                     </div>
 
-                    {/* Vehicle */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: C.bgDeep, borderRadius: 10, marginBottom: 12 }}>
-                      <Icon name="car" size={18} color={toneColor[d.tone]}/>
+                    <div className={`${styles.vehicle} ${toneClass}`}>
+                      <Icon name="car" size={18} color="currentColor" />
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{d.vehicle}</div>
-                        <div style={{ fontSize: 11, color: C.ink3, fontWeight: 600, marginTop: 1 }}>{d.type}</div>
+                        <div className={styles.vehicleName}>{driver.vehicle}</div>
+                        <div className={styles.vehicleType}>{driver.type}</div>
                       </div>
                     </div>
 
-                    {/* Coverage */}
-                    <div style={{ fontSize: 12, color: C.ink3, fontWeight: 500, marginBottom: 10, display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                      <Icon name="pin" size={13} color={C.ink3}/>
-                      <span>{d.areas}</span>
-                    </div>
-
-                    {/* Languages */}
-                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 12 }}>
-                      {d.langs.map(l => (
-                        <Tag key={l} color={C.ink2} bg={C.bgDeep}
-                          style={l === 'मराठी' ? { fontFamily: F.deva, textTransform: 'none', letterSpacing: 0, fontSize: 11 } : {}}>
-                          {l}
+                    <div className={styles.languages}>
+                      {driver.langs.map(language => (
+                        <Tag
+                          key={language}
+                          className={undefined}
+                        >
+                          {language}
                         </Tag>
                       ))}
                     </div>
 
-                    {/* Note */}
-                    <div style={{ fontSize: 12, color: C.ink3, fontStyle: 'italic', marginBottom: 14, lineHeight: 1.4 }}>"{d.note}"</div>
 
-                    {/* Rates + CTA */}
-                    <div style={{ paddingTop: 12, borderTop: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div className={styles.rateRow}>
                       <div>
-                        <span style={{ fontFamily: F.display, fontSize: 18, fontWeight: 700, color: C.saffronDk }}>{d.rate}</span>
-                        <span style={{ fontSize: 11.5, color: C.ink3, fontWeight: 500, marginLeft: 6 }}>{d.base}</span>
+                        <span className={styles.rate}>{driver.base}</span>
                       </div>
-                      <Btn
+                      <div className={styles.driverActions}>
+                        <Btn kind="ghost" size="sm" onClick={() => setSelectedDriver(driver)}>View details</Btn>
+                        <Btn
                         kind={isContacted ? 'soft' : 'primary'}
                         size="sm"
-                        onClick={() => { setContacted(s => { const n = new Set(s); n.has(d.id) ? n.delete(d.id) : n.add(d.id); return n; }); setSelectedDriver(d.name); setBookOpen(true); }}
+                        onClick={() => {
+                          setContacted(current => {
+                            const next = new Set(current);
+                            if (next.has(driver.id)) {
+                              next.delete(driver.id);
+                            } else {
+                              next.add(driver.id);
+                            }
+                            return next;
+                          });
+                          setBookOpen(true);
+                        }}
                       >
-                        {isContacted ? 'Requested ✓' : 'Book ride'}
+                        {isContacted ? 'Requested ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“' : 'Book ride'}
                       </Btn>
+                      </div>
                     </div>
                   </div>
                 </Card>
@@ -429,50 +602,129 @@ export default function TaxiPage() {
         )}
       </section>
 
-      {/* Register CTA */}
-      <Card pad={28} style={{ background: 'linear-gradient(135deg, #FFF8EB 0%, #FFE9D6 60%, #FFD9A6 100%)', border: `1px solid rgba(184,137,60,0.18)` }}>
-        <div className="mob-stack" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.saffronDk, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>Drive with your community</div>
-            <h3 style={{ margin: 0, fontFamily: F.display, fontSize: 22, fontWeight: 600, color: C.ink, letterSpacing: '-0.025em', lineHeight: 1.2 }}>
-              Are you a driver? List yourself for free.
-            </h3>
-            <p style={{ margin: '8px 0 0', fontSize: 13.5, color: C.ink2, fontWeight: 500, lineHeight: 1.5, maxWidth: 560 }}>
-              Verified community members can list their driving services. No commission — passengers contact you directly.
-            </p>
+      <Modal isOpen={bookOpen} onClose={() => !submittingRide && setBookOpen(false)} title="Request a Taxi" width={680}>
+        <div className={styles.requestTaxiForm}>
+          <p className={styles.requestSubtitle}>Get community driver quotes for your trip.</p>
+          <div className={styles.requestLocationGrid}>
+            <Field label="Country" value={rideForm.countryId} placeholder={registrationLocationsLoading ? 'Loading countries...' : 'Select Country'} options={registrationCountries.map(country => ({ value: country.id, label: country.name }))} onChange={value => setRideForm(current => ({ ...current, countryId: value, cityId: '' }))} />
+            <Field label="City" value={rideForm.cityId} placeholder={rideForm.countryId ? 'Select City' : 'Select country first'} options={requestCities.map(city => ({ value: city.id, label: city.name }))} onChange={value => setRideForm(current => ({ ...current, cityId: value }))} />
           </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <Btn kind="primary" size="md" iconL="plus" onClick={() => setRegisterOpen(true)}>Post requirement</Btn>
-            <Btn kind="ghost" size="md" onClick={() => setInfoOpen(true)}>How it works</Btn>
+          <Field label="Pickup Location" value={rideForm.pickup} placeholder="Enter pickup location" onChange={value => setRideForm(current => ({ ...current, pickup: value }))} />
+          <Field label="Drop Location" value={rideForm.drop} placeholder="Enter drop location" onChange={value => setRideForm(current => ({ ...current, drop: value }))} />
+          <Field label="Date" type="date" value={rideForm.tripDate} onChange={value => setRideForm(current => ({ ...current, tripDate: value }))} />
+          <Field label="Passengers" type="number" value={rideForm.passengers} placeholder="Number of passengers" onChange={value => setRideForm(current => ({ ...current, passengers: value }))} />
+          <Field label="Preferred Time" type="time" value={rideForm.tripTime} onChange={value => setRideForm(current => ({ ...current, tripTime: value }))} />
+          <Field label="Your Quote" type="number" value={rideForm.userQuote} placeholder="Enter your expected fare" onChange={value => setRideForm(current => ({ ...current, userQuote: value }))} />
+          <button type="button" className={styles.submitRequestButton} disabled={submittingRide} onClick={submitRide}>{submittingRide ? 'Submitting...' : 'Submit Request'}</button>
+        </div>
+      </Modal>
+
+      <Modal isOpen={tripsOpen} onClose={() => setTripsOpen(false)} title="My Taxi Trips & Quotes" width={760}>
+        <div className={styles.tripList}>
+          {flowLoading && <div className={styles.statusMessage}>Loading taxi activity...</div>}
+          {!flowLoading && requests.length === 0 && <div className={styles.statusMessage}>No taxi requests yet.</div>}
+          {requests.map(request => {
+            const requestQuotes = quotes.filter(quote => refId(quote.MCS_Taxi_Service_Request_ID) === String(request.id));
+            const tripStatus = refId(request.MCS_TripStatus) || 'O';
+            return <div className={styles.tripCard} key={request.id}>
+              <div className={styles.tripHeader}><strong>{request.MCS_Pickup || 'Pickup'} to {request.MCS_Drop || 'Destination'}</strong><Tag>{tripStatus === 'A' ? 'Accepted' : tripStatus === 'C' ? 'Completed' : tripStatus === 'X' ? 'Cancelled' : 'Awaiting quotes'}</Tag></div>
+              <div className={styles.tripMeta}>{request.MCS_TripDate ? new Date(request.MCS_TripDate).toLocaleString() : 'Flexible date'} - Budget {request.MCS_UserQuote || 'open'}</div>
+              <div className={styles.quoteList}>{requestQuotes.map(quote => {
+                const driverName = quote.Name || quote.MCS_TaxiDriver_ID?.identifier || 'Taxi Driver';
+                return <div className={styles.quoteRow} key={quote.id}><div><strong>{driverName}</strong><span>{quote.C_Currency_ID?.identifier || 'USD'} {quote.MCS_QuotedFare}</span></div><div className={styles.driverActions}><Btn kind="ghost" size="sm" onClick={() => openTaxiChat(driverName, { requestId: String(request.id), quoteId: String(quote.id), fare: quote.MCS_QuotedFare })}>Chat</Btn>{tripStatus === 'O' && <Btn kind="primary" size="sm" onClick={() => acceptQuote(quote)}>Accept quote</Btn>}</div></div>;
+              })}</div>
+              {requestQuotes.length === 0 && <div className={styles.noQuotes}>No quotes received yet.</div>}
+            </div>;
+          })}
+        </div>
+      </Modal>
+      <Modal isOpen={driverRequestsOpen} onClose={() => setDriverRequestsOpen(false)} title="Passenger Ride Requests" width={820}>
+        <div className={styles.tripList}>
+          <p className={styles.registrationNote}>Review open requests and send a fare quote as a registered taxi driver.</p>
+          {driverRequestsLoading && <div className={styles.statusMessage}>Loading passenger requests...</div>}
+          {!driverRequestsLoading && incomingRequests.length === 0 && <div className={styles.statusMessage}>No open ride requests.</div>}
+          {incomingRequests.map(request => <div className={styles.tripCard} key={request.id}>
+            <div className={styles.tripHeader}><strong>{request.MCS_Pickup || 'Pickup'} to {request.MCS_Drop || 'Destination'}</strong><Tag>Awaiting Quotes</Tag></div>
+            <div className={styles.tripMeta}>{request.MCS_TripDate ? new Date(request.MCS_TripDate).toLocaleString() : 'Flexible date'} - {request.MCS_PassengerCount || 1} passengers - Expected fare {request.MCS_UserQuote || 'open'}</div>
+            <div className={styles.quoteComposer}>
+              <input type="number" min="1" value={quoteFare[String(request.id)] || ''} onChange={event => setQuoteFare(current => ({ ...current, [String(request.id)]: event.target.value }))} placeholder="Enter your fare" />
+              <Btn kind="ghost" size="sm" onClick={() => openTaxiChat(request.AD_User_ID?.identifier || '')}>Chat</Btn><Btn kind="primary" size="sm" disabled={quoteSending === String(request.id)} onClick={() => sendQuote(String(request.id))}>{quoteSending === String(request.id) ? 'Sending...' : 'Send Quote'}</Btn>
+            </div>
+          </div>)}
+        </div>
+      </Modal>
+
+      <Modal isOpen={completedTripsOpen} onClose={() => setCompletedTripsOpen(false)} title="Completed Trips" width={820}>
+        <div className={styles.tripList}>
+          {driverRequestsLoading && <div className={styles.statusMessage}>Loading completed trips...</div>}
+          {!driverRequestsLoading && completedTrips.length === 0 && <div className={styles.statusMessage}>No completed trips.</div>}
+          {completedTrips.map(request => <div className={styles.tripCard} key={request.id}><div className={styles.tripHeader}><strong>{request.MCS_Pickup || 'Pickup'} to {request.MCS_Drop || 'Destination'}</strong><Tag>Completed</Tag></div><div className={styles.tripMeta}>{request.MCS_TripDate ? new Date(request.MCS_TripDate).toLocaleString() : 'Flexible date'} - {request.MCS_PassengerCount || 1} passengers</div></div>)}
+        </div>
+      </Modal>
+      <Modal isOpen={Boolean(selectedDriver)} onClose={() => setSelectedDriver(null)} title="Taxi Driver Profile" width={720}>
+        {selectedDriver && <div className={styles.profilePanel}>
+          <div className={styles.profileHero}>
+            <Avatar name={selectedDriver.name} size={76} />
+            <div><h3>{selectedDriver.name}</h3><span className={styles.verifiedBadge}>Verified Community Driver</span><p>{selectedDriver.city} - Available for direct booking</p></div>
+          </div>
+          <div className={styles.profileStats}>
+            <div><strong>{selectedDriver.rating || 'New'}</strong><span>Rating</span></div>
+            <div><strong>{selectedDriver.trips.toLocaleString()}</strong><span>Total Trips</span></div>
+            <div><strong>{selectedDriver.available ? 'Online' : 'Offline'}</strong><span>Availability</span></div>
+          </div>
+          <div className={styles.profileSection}><h4>Vehicle Details</h4><strong>{selectedDriver.vehicle}</strong><p>{selectedDriver.type} - Base fare {selectedDriver.base}</p></div>
+          <div className={styles.profileSection}><h4>Languages</h4><div className={styles.languages}>{selectedDriver.langs.map(language => <Tag key={language}>{language}</Tag>)}</div></div>
+          <div className={styles.registrationActions}><Btn kind="ghost" size="md" onClick={() => setSelectedDriver(null)}>Close</Btn><Btn kind="primary" size="md" onClick={() => { setRideForm(current => ({ ...current, description: `Preferred driver: ${selectedDriver.name} (#${selectedDriver.id})` })); setSelectedDriver(null); setBookOpen(true); }}>Request This Driver</Btn></div>
+        </div>}
+      </Modal>
+
+      <Modal isOpen={Boolean(confirmedBooking)} onClose={() => setConfirmedBooking(null)} title="Taxi Booking Confirmed" width={680}>
+        {confirmedBooking && <div className={styles.confirmationPanel}>
+          <div className={styles.confirmationSuccess}><h3>Booking Confirmed!</h3><p>Your taxi has been booked successfully.</p></div>
+          <div className={styles.confirmedDriver}><div><strong>{confirmedBooking.quote.Name || confirmedBooking.quote.MCS_TaxiDriver_ID?.identifier || 'Taxi Driver'}</strong><span>Verified community driver</span></div><strong>{confirmedBooking.quote.C_Currency_ID?.identifier || 'USD'} {confirmedBooking.quote.MCS_QuotedFare}</strong></div>
+          <div className={styles.profileSection}><h4>Trip Details</h4><p><strong>From:</strong> {confirmedBooking.request?.MCS_Pickup || 'Pickup location'}</p><p><strong>To:</strong> {confirmedBooking.request?.MCS_Drop || 'Destination'}</p><p><strong>Date:</strong> {confirmedBooking.request?.MCS_TripDate ? new Date(confirmedBooking.request.MCS_TripDate).toLocaleString() : 'Flexible'}</p><p><strong>Passengers:</strong> {confirmedBooking.request?.MCS_PassengerCount || 1}</p></div>
+          <div className={styles.registrationActions}><Btn kind="primary" size="md" onClick={() => setConfirmedBooking(null)}>Done</Btn></div>
+        </div>}
+      </Modal>
+      <Modal isOpen={registerOpen} onClose={() => !registering && setRegisterOpen(false)} title="Become a Taxi Driver" width={620}>
+        <div className={styles.registrationForm}>
+          <p className={styles.registrationNote}>Create your driver profile. It will remain unverified until reviewed by MCS.</p>
+          <div className={styles.registrationGrid}>
+            <Field label="Vehicle" value={driverForm.vehicle} placeholder="Toyota Camry 2024" onChange={value => setDriverForm(current => ({ ...current, vehicle: value }))} />
+            <Field label="Vehicle type" value={driverForm.vehicleType} placeholder="Sedan" onChange={value => setDriverForm(current => ({ ...current, vehicleType: value }))} />
+            <Field label="Base fare" type="number" value={driverForm.baseFare} placeholder="6" onChange={value => setDriverForm(current => ({ ...current, baseFare: value }))} />
+            <Field label="Phone" type="tel" value={driverForm.phone} placeholder="+91 98765 43210" onChange={value => setDriverForm(current => ({ ...current, phone: value }))} />
+            <Field label="Country" value={driverForm.countryId} placeholder={registrationLocationsLoading ? 'Loading...' : 'Select country'} options={registrationCountries.map(country => ({ value: country.id, label: country.name }))} onChange={value => setDriverForm(current => ({ ...current, countryId: value, cityId: '', city: '', serviceAreaIds: [] }))} />
+            <Field label="City" value={driverForm.cityId} placeholder={driverForm.countryId ? 'Select city' : 'Select country first'} options={registrationCities.map(city => ({ value: city.id, label: city.name }))} onChange={value => setDriverForm(current => ({ ...current, cityId: value, city: registrationCities.find(city => city.id === value)?.name || '' }))} />
+            <Field label="Language" value={driverForm.language} placeholder="Select language" options={registrationLanguages.map(language => ({ value: language.code, label: language.name }))} onChange={value => setDriverForm(current => ({ ...current, language: value }))} />
+            <Field label="Complementary food" value={driverForm.complementaryFood} placeholder="Water and snacks" onChange={value => setDriverForm(current => ({ ...current, complementaryFood: value }))} />
+          </div>
+                    <fieldset className={styles.serviceAreaField} disabled={!driverForm.countryId || registrationCities.length === 0}>
+            <legend>Service areas</legend>
+            <div className={styles.serviceAreaOptions}>
+              {registrationCities.map(city => (
+                <label key={city.id} className={styles.serviceAreaOption}>
+                  <input
+                    type="checkbox"
+                    checked={driverForm.serviceAreaIds.includes(city.id)}
+                    onChange={event => setDriverForm(current => ({
+                      ...current,
+                      serviceAreaIds: event.target.checked
+                        ? [...current.serviceAreaIds, city.id]
+                        : current.serviceAreaIds.filter(id => id !== city.id),
+                    }))}
+                  />
+                  <span>{city.name}</span>
+                </label>
+              ))}
+              {driverForm.countryId && registrationCities.length === 0 && <div className={styles.noServiceAreas}>No cities available.</div>}
+            </div>
+          </fieldset>          <div className={styles.registrationActions}>
+            <Btn kind="ghost" size="md" disabled={registering} onClick={() => setRegisterOpen(false)}>Cancel</Btn>
+            <Btn kind="primary" size="md" disabled={registering} onClick={registerDriver}>{registering ? 'Submitting...' : 'Submit profile'}</Btn>
           </div>
         </div>
-      </Card>
-      
-      <BecomeProviderModal isOpen={registerOpen} onClose={() => setRegisterOpen(false)}/>
-      <FilterModal isOpen={filterOpen} onClose={() => setFilterOpen(false)} />
-      <InfoModal 
-        isOpen={infoOpen} onClose={() => setInfoOpen(false)} 
-        title="How it works" 
-        content={
-          <ul style={{ paddingLeft: 20, margin: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <li><b>Find a driver:</b> Browse trusted Marathi drivers for local trips or intercity transfers.</li>
-            <li><b>Post a requirement:</b> Need a ride to the airport? Let the community know.</li>
-            <li><b>Direct communication:</b> Connect and negotiate terms directly with the driver.</li>
-            <li><b>Community trust:</b> All drivers are verified members of the local mandal network.</li>
-          </ul>
-        } 
-      />
-      <BookModal
-        isOpen={bookOpen} onClose={() => setBookOpen(false)}
-        title={`Book Ride with ${selectedDriver}`} marathi="बुकिंग"
-        submitLabel="Send booking request"
-        fields={[
-          { key: 'pickup', label: 'Pickup address', placeholder: 'Current location or address' },
-          { key: 'dropoff', label: 'Drop-off address', placeholder: 'Airport / Hotel / City' },
-          { key: 'date', label: 'Pickup date & time', placeholder: 'Tomorrow at 10 AM' },
-          { key: 'passengers', label: 'Passengers & Luggage', placeholder: '2 adults, 2 large bags' },
-        ]}
-      />
+      </Modal>
     </div>
   );
 }
