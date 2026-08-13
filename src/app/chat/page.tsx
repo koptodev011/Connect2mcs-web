@@ -238,12 +238,19 @@ function ChatContent() {
 
   const directConversations = chats.map(c => {
     const otherUid = c.participants.find((p: string) => p !== currentUser?.uid);
-    const otherDetail = c.memberDetails?.[otherUid] || { name: 'Community Member' };
-    const isOnline = usersList.find(u => u.uid === otherUid)?.is_online || false;
     const otherProfile = usersList.find(u => u.uid === otherUid);
+    const memberName = c.memberDetails?.[otherUid]?.name;
+    const memberDisplayName = c.memberDetails?.[otherUid]?.displayName;
+    const profileName = otherProfile?.displayName || otherProfile?.name;
+    const otherName =
+      profileName ||
+      memberDisplayName ||
+      (memberName && memberName !== 'Community Member' ? memberName : undefined) ||
+      'Community Member';
+    const isOnline = otherProfile?.is_online || false;
     return {
       id: c.id,
-      name: otherDetail.name,
+      name: otherName,
       otherUid,
       isGroup: false,
       lastMessage: c.lastMessage || 'Say hi to start the conversation!',
@@ -424,7 +431,7 @@ function ChatContent() {
   if (loading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <PageHeader title="Chat" marathi="Ã Â¤Â¸Ã Â¤â€šÃ Â¤ÂµÃ Â¤Â¾Ã Â¤Â¦" subtitle="Real-time messaging with people you're connected to" />
+        <PageHeader title="Chat" marathi="संवाद" subtitle="Real-time messaging with people you're connected to" />
         <div style={{ padding: 40, textAlign: 'center', color: C.ink3, fontWeight: 500 }}>
           Loading members and conversations...
         </div>
@@ -436,7 +443,7 @@ function ChatContent() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <PageHeader
         title="Chat"
-        marathi="à¤¸à¤‚à¤µà¤¾à¤¦"
+        marathi="संवाद"
         subtitle="Real-time messaging with people you're connected to"
         actions={<>
           <Btn kind="ghost" size="md" iconL="search">Search messages</Btn>
@@ -450,7 +457,7 @@ function ChatContent() {
           <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.line}` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: C.bgDeep, borderRadius: 10 }}>
               <Icon name="search" size={15} color={C.ink3}/>
-              <input value={searchPeople} onChange={e => setSearchPeople(e.target.value)} placeholder="Search people, groupsâ€¦" style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: 13, fontWeight: 500, fontFamily: 'inherit' }}/>
+              <input value={searchPeople} onChange={e => setSearchPeople(e.target.value)} placeholder="Search people, groups…" style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: 13, fontWeight: 500, fontFamily: 'inherit' }}/>
             </div>
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -471,7 +478,7 @@ function ChatContent() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {c.name}{c.isGroup && <span style={{ color: C.ink3, fontWeight: 500, fontSize: 11, marginLeft: 4 }}>Â· group</span>}
+                        {c.name}{c.isGroup && <span style={{ color: C.ink3, fontWeight: 500, fontSize: 11, marginLeft: 4 }}>· group</span>}
                       </span>
                       <span style={{ fontSize: 11, color: C.ink3, fontWeight: 500, flexShrink: 0 }}>
                         {c.lastMessageTime ? c.lastMessageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
@@ -501,7 +508,7 @@ function ChatContent() {
                 <div>
                   <div style={{ fontFamily: F.display, fontSize: 16, fontWeight: 600, color: C.ink, letterSpacing: '-0.02em' }}>{activeConv.name}</div>
                   <div style={{ fontSize: 11.5, color: activeConv.online ? C.green : C.ink3, fontWeight: 600, marginTop: 1 }}>
-                    â— {activeConv.online ? 'Online' : 'Last seen 1h ago'} {activeConv.mandal && <span style={{ color: C.ink4 }}> Â· {activeConv.mandal}</span>}
+                    ● {activeConv.online ? 'Online' : 'Last seen 1h ago'} {activeConv.mandal && <span style={{ color: C.ink4 }}> Â· {activeConv.mandal}</span>}
                   </div>
                 </div>
               </div>
@@ -543,7 +550,7 @@ function ChatContent() {
                       {m.text}
                     </div>
                     <div style={{ fontSize: 10.5, color: C.ink3, fontWeight: 500, marginTop: 4, textAlign: isMe ? 'right' : 'left', padding: '0 6px' }}>
-                      {m.at}{isMe && ' Â· Read'}
+                      {m.at}{isMe && ' · Read'}
                     </div>
                   </div>
                 );
@@ -578,7 +585,7 @@ function ChatContent() {
       </Card>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 12, color: C.ink3, fontWeight: 500 }}>
-        <Tag color={C.green} bg={C.greenLt}>â— End-to-end encrypted</Tag>
+        <Tag color={C.green} bg={C.greenLt}>● End-to-end encrypted</Tag>
         Messages are private between you and your community connections.
       </div>
 
@@ -600,7 +607,7 @@ function ChatContent() {
               onClick={() => setNewChatOpen(false)}
               style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer' }}
             >
-              <span style={{ fontSize: 18, color: C.ink3, fontWeight: 700 }}>âœ•</span>
+              <span style={{ fontSize: 18, color: C.ink3, fontWeight: 700 }}>X</span>
             </button>
 
             <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 700, color: C.ink }}>Start a conversation</h3>
@@ -645,3 +652,7 @@ export default function ChatPage() {
     </Suspense>
   );
 }
+
+
+
+
