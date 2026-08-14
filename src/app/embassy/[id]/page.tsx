@@ -79,7 +79,7 @@ export default function EmbassyDetailsPage({ params }: { params: Promise<{ id: s
 
         <div style={{ display: 'flex', gap: 12, marginTop: 32, position: 'relative', zIndex: 1 }}>
           <Btn kind="outline" style={{ flex: 1, background: '#fff', color: '#1A3673', borderColor: '#fff' }} iconL="phone" onClick={() => window.open(`tel:${mission.telephone}`, '_self')}>Call</Btn>
-          <Btn kind="outline" style={{ flex: 1, color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} iconL="map" onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(mission.name + ' ' + mission.address)}`, '_blank')}>Directions</Btn>
+          <Btn kind="outline" style={{ flex: 1,  background: '#fff', color: '#1A3673', borderColor: '#fff' }} iconL="map" onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(mission.name + ' ' + mission.address)}`, '_blank')}>Directions</Btn>
           <button style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={() => window.open(websiteUrl, '_blank', 'noopener,noreferrer')}>
             <Icon name="globe" size={20} color="#fff" />
           </button>
