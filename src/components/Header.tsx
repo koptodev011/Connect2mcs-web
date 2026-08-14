@@ -51,7 +51,7 @@ export default function Header() {
   const searchRef = useRef<HTMLInputElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
-  const [currentUser, setCurrentUser] = useState<{ name: string; city?: string; country?: string; countryId?: string; avatar?: string; isGuest?: boolean } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ name: string; city?: string; country?: string; countryId?: string; avatar?: string; isGuest?: boolean; loginType?: string } | null>(null);
 
   useEffect(() => {
     fetch('/api/data/countries')
@@ -68,7 +68,7 @@ export default function Header() {
   useEffect(() => {
     async function loadUser(forceUserCountry = false) {
       const saved = localStorage.getItem('mcs_user');
-      let user: { name: string; city?: string; country?: string; countryId?: string; avatar?: string; isGuest?: boolean } | null = null;
+      let user: { name: string; city?: string; country?: string; countryId?: string; avatar?: string; isGuest?: boolean; loginType?: string } | null = null;
       if (saved) {
         try { user = JSON.parse(saved); } catch { user = null; }
       }
@@ -88,7 +88,13 @@ export default function Header() {
         if (profile) {
           country = String(profile.country || '');
           countryId = String(profile.countryId || '');
-          const updatedUser = { ...user, country, countryId };
+          const updatedUser = {
+            ...user,
+            country,
+            countryId,
+            city: String(profile.city || user.city || ''),
+            loginType: String(profile.loginTypeId || user.loginType || ''),
+          };
           localStorage.setItem('mcs_user', JSON.stringify(updatedUser));
           setCurrentUser(updatedUser);
         }
@@ -393,7 +399,9 @@ export default function Header() {
                   <Avatar name={currentUser.name} size={32}/>
                   <div className="mob-hide" style={{ textAlign: 'left', lineHeight: 1.1 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{currentUser.name.split(' ')[0]}</div>
-                    <div style={{ fontSize: 10, color: C.ink3, fontWeight: 600, marginTop: 1 }}>NRI · {currentUser.city || location.city}</div>
+                    <div style={{ fontSize: 10, color: C.ink3, fontWeight: 600, marginTop: 1 }}>
+                      {({ S: 'Student', J: 'NRI', E: 'Entrepreneur' } as Record<string, string>)[currentUser.loginType || ''] || ''} · {currentUser.city || location.city}
+                    </div>
                   </div>
                   <span style={{ display: 'flex', transform: 'rotate(90deg)' }}>
                     <Icon name="chev" size={14} color={C.ink3}/>

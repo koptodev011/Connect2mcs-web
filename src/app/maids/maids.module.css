@@ -1,0 +1,2034 @@
+.page,
+.profilePage {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  color: #23160f;
+}
+.intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.intro h1 {
+  font-size: 34px;
+  margin: 0;
+  line-height: 1.05;
+}
+.intro p,
+.sectionTitle p {
+  margin: 5px 0 0;
+  color: #9b745d;
+  font-size: 13px;
+}
+.notification {
+  display: none;
+  position: relative;
+  border: 0;
+  background: transparent;
+}
+.notification b {
+  position: absolute;
+  top: -8px;
+  right: -7px;
+  background: #a94324;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 9px;
+  min-width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+}
+.searchRow {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+.search {
+  height: 50px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex: 1;
+  padding: 0 16px;
+  background: #fff;
+  border: 1px solid #eadcd2;
+  border-radius: 15px;
+  box-shadow: 0 3px 12px rgba(67, 39, 22, 0.04);
+}
+.search input {
+  border: 0;
+  outline: 0;
+  width: 100%;
+  font-size: 14px;
+  background: transparent;
+  color: #281a12;
+}
+.filterButton {
+  height: 50px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 15px;
+  background: #ed6725;
+  color: #fff;
+  font-weight: 700;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+}
+.filterTabs {
+  display: flex;
+  gap: 8px;
+  overflow: auto;
+  margin-top: 14px;
+}
+.filterTabs button {
+  white-space: nowrap;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid #eadcd2;
+  background: #fff;
+  color: #4f3a2d;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.filterTabs .activeFilter {
+  background: #e86629;
+  color: #fff;
+  border-color: #e86629;
+}
+.section {
+  margin-top: 30px;
+}
+.sectionTitle h2 {
+  font-size: 20px;
+  margin: 0;
+}
+.topScroller {
+  display: flex;
+  gap: 14px;
+  overflow: auto;
+  margin-top: 12px;
+  padding: 1px 1px 8px;
+  scroll-snap-type: x mandatory;
+}
+.topCard {
+  width: 286px;
+  flex: 0 0 286px;
+  padding: 17px;
+  background: #fff;
+  border: 1px solid #eadfd7;
+  border-radius: 15px;
+  box-shadow: 0 4px 12px rgba(59, 34, 20, 0.06);
+  scroll-snap-align: start;
+}
+.topPerson {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.topPerson h3,
+.helperInfo h3 {
+  font-size: 14px;
+  margin: 0;
+}
+.topPerson p,
+.helperInfo > p {
+  font-size: 12px;
+  color: #59463a;
+  margin: 3px 0;
+}
+.avatar {
+  position: relative;
+  flex: 0 0 auto;
+}
+.avatar > div {
+  background: linear-gradient(145deg, #f8d8b1, #f4a765) !important;
+  color: #8d3e1d !important;
+}
+.avatar i,
+.profileAvatar i {
+  position: absolute;
+  right: -2px;
+  bottom: 1px;
+  background: #fff;
+  padding: 2px;
+  border-radius: 50%;
+  height: 16px;
+}
+.rating {
+  font-size: 11px;
+  font-weight: 700;
+  color: #3f2b20;
+}
+.rating span,
+.reviewsTitle span,
+.reviews article div span {
+  color: #d99a12;
+}
+.rating em {
+  font-style: normal;
+  color: #a58773;
+  font-weight: 500;
+}
+.badges {
+  display: flex;
+  gap: 8px;
+  margin: 13px 0 10px;
+}
+.badges span,
+.nameLine span {
+  font-size: 9px;
+  font-weight: 700;
+  color: #d15125;
+  background: #fff0e8;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.badges span + span {
+  color: #b27b12;
+  background: #fff5d9;
+}
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #8e7565;
+  font-size: 10px;
+  margin: 0;
+}
+.priceRow {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+.priceRow small {
+  display: block;
+  font-size: 9px;
+  color: #927968;
+}
+.priceRow strong,
+.cardAction strong {
+  display: block;
+  color: #d44718;
+  font-size: 15px;
+}
+.priceRow a,
+.cardAction a {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #e86629;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.helperGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.helperCard {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #eadfd7;
+  border-radius: 14px;
+  box-shadow: 0 3px 10px rgba(59, 34, 20, 0.05);
+}
+.helperInfo {
+  min-width: 0;
+}
+.nameLine {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.helperInfo small {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #8f7564;
+  font-size: 10px;
+  margin-top: 4px;
+}
+.cardAction {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+.cardAction a {
+  background: #fff3e8;
+  color: #cc531e;
+  padding: 7px 13px;
+}
+.empty,
+.loading {
+  text-align: center;
+  padding: 50px;
+  color: #947765;
+}
+.profileNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.profileNav a {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 13px;
+}
+.profileNav button {
+  border: 0;
+  background: transparent;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.profileNav .saved {
+  background: #a94324;
+}
+.profileHero {
+  text-align: center;
+  margin-top: 8px;
+}
+.profileAvatar {
+  position: relative;
+  display: inline-block;
+}
+.profileAvatar > div {
+  background: linear-gradient(145deg, #f8d8b1, #f4a765) !important;
+  color: #8d3e1d !important;
+}
+.profileHero h1 {
+  font-size: 24px;
+  margin: 10px 0 1px;
+}
+.profileHero p {
+  font-size: 12px;
+  margin: 0;
+  color: #5f493a;
+}
+.profileHero small {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  color: #927765;
+  margin-top: 5px;
+}
+.verificationTags {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 9px;
+}
+.verificationTags span,
+.verificationTags b {
+  font-size: 8px;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 3px 6px;
+  background: #e5f5ea;
+  color: #34835f;
+}
+.verificationTags b {
+  background: #fff0e8;
+  color: #d05229;
+}
+.profileLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.7fr);
+  gap: 24px;
+  margin-top: 18px;
+}
+.profileMain {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: #fff;
+  border: 1px solid #eadfd7;
+  border-radius: 12px;
+  padding: 12px 0;
+}
+.stats div {
+  text-align: center;
+  border-right: 1px solid #eee3db;
+}
+.stats div:last-child {
+  border: 0;
+}
+.stats strong {
+  display: block;
+  color: #df6a28;
+  font-size: 14px;
+}
+.stats small {
+  font-size: 8px;
+  color: #987c69;
+}
+.package {
+  position: relative;
+  overflow: hidden;
+  background: #ed6725;
+  color: #fff;
+  border-radius: 13px;
+  padding: 18px 20px;
+}
+.package:after {
+  content: "";
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  right: -28px;
+  top: -26px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.package > small {
+  text-transform: uppercase;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.package h2 {
+  font-size: 22px;
+  margin: 5px 0 10px;
+}
+.package h2 span {
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 500;
+}
+.package > div {
+  display: flex;
+  gap: 20px;
+  font-size: 9px;
+}
+.package > div span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.contentCard,
+.reviews {
+  background: #fff;
+  border: 1px solid #eadfd7;
+  border-radius: 12px;
+  padding: 14px;
+}
+.contentCard h2,
+.reviews h2,
+.bookingPanel h2 {
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+.contentCard p {
+  font-size: 10px;
+  line-height: 1.65;
+  margin: 0;
+  color: #564237;
+}
+.skillTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.skillTags span {
+  font-size: 8px;
+  background: #fff2e8;
+  color: #cb5420;
+  padding: 5px 8px;
+  border-radius: 999px;
+}
+.availability {
+  font-size: 9px;
+  margin: 0;
+}
+.availability div {
+  display: flex;
+  justify-content: space-between;
+  margin: 5px 0;
+}
+.availability dt {
+  font-weight: 600;
+}
+.availability dd {
+  font-weight: 700;
+  margin: 0;
+}
+.availability div:last-child dd {
+  color: #379166;
+}
+.verifiedBox {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px;
+  background: #e7f6ef;
+  border: 1px solid #aedfcd;
+  border-radius: 8px;
+  color: #286f55;
+}
+.verifiedBox div {
+  display: flex;
+  flex-direction: column;
+  font-size: 8px;
+}
+.verifiedBox strong {
+  font-size: 9px;
+  margin-bottom: 2px;
+}
+.verifiedBox span:before {
+  content: "✓ ";
+}
+.reviewsTitle,
+.reviews article > div {
+  display: flex;
+  justify-content: space-between;
+}
+.reviewsTitle h2 {
+  margin: 0;
+}
+.reviewsTitle span {
+  font-size: 10px;
+}
+.reviewsTitle b {
+  color: #3a2a21;
+}
+.reviews article {
+  padding: 10px;
+  background: #fffaf5;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+.reviews article strong {
+  font-size: 9px;
+}
+.reviews article div span {
+  font-size: 8px;
+}
+.reviews article p {
+  font-size: 9px;
+  color: #745b4b;
+  margin: 5px 0;
+  line-height: 1.5;
+}
+.reviews article small {
+  font-size: 7px;
+  color: #ad9687;
+}
+.bookingPanel {
+  position: sticky;
+  top: 20px;
+  background: #fff;
+  border: 1px solid #eadfd7;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 6px 20px rgba(53, 31, 18, 0.06);
+}
+.bookingPanel > p {
+  font-size: 11px;
+  color: #8b7261;
+}
+.bookingPanel label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 12px;
+}
+.bookingPanel input,
+.bookingPanel select,
+.bookingPanel textarea {
+  display: block;
+  width: 100%;
+  border: 1px solid #eadfd7;
+  border-radius: 8px;
+  padding: 9px;
+  margin-top: 5px;
+  font: inherit;
+  font-size: 11px;
+  background: #fff;
+}
+.bookingPanel textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+.bookingPanel > button,
+.mobileActions > button:last-child {
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  padding: 11px;
+  background: #ed6725;
+  color: #fff;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 16px;
+}
+.mobileActions {
+  display: none;
+}
+@media (max-width: 768px) {
+  .page,
+  .profilePage {
+    margin: -8px -4px 0;
+  }
+  .intro h1 {
+    font-size: 22px;
+  }
+  .intro p {
+    font-size: 10px;
+  }
+  .notification {
+    display: block;
+  }
+  .searchRow {
+    margin-top: 13px;
+  }
+  .search {
+    height: 42px;
+    border-radius: 999px;
+  }
+  .search input {
+    font-size: 11px;
+  }
+  .filterButton {
+    height: 42px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 11px;
+  }
+  .filterTabs {
+    margin-top: 10px;
+  }
+  .filterTabs button {
+    font-size: 9px;
+    padding: 6px 13px;
+  }
+  .section {
+    margin-top: 18px;
+  }
+  .sectionTitle h2 {
+    font-size: 14px;
+  }
+  .sectionTitle p {
+    font-size: 9px;
+    margin-top: 1px;
+  }
+  .topScroller {
+    margin-right: -20px;
+  }
+  .topCard {
+    width: 202px;
+    flex-basis: 202px;
+    padding: 12px;
+  }
+  .topPerson {
+    gap: 8px;
+  }
+  .topPerson h3 {
+    font-size: 10px;
+  }
+  .topPerson p {
+    font-size: 8px;
+  }
+  .avatarLarge > div {
+    width: 43px !important;
+    height: 43px !important;
+    font-size: 14px !important;
+  }
+  .badges {
+    margin: 8px 0 6px;
+  }
+  .badges span {
+    font-size: 7px;
+    padding: 3px 6px;
+  }
+  .priceRow strong {
+    font-size: 12px;
+  }
+  .priceRow a {
+    font-size: 8px;
+    padding: 7px 13px;
+  }
+  .helperGrid {
+    grid-template-columns: 1fr;
+    gap: 7px;
+    margin-top: 8px;
+  }
+  .helperCard {
+    padding: 10px;
+    gap: 8px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .helperCard .avatar > div {
+    width: 43px !important;
+    height: 43px !important;
+    font-size: 14px !important;
+  }
+  .helperInfo h3 {
+    font-size: 10px;
+  }
+  .helperInfo > p {
+    font-size: 8px;
+    margin: 1px 0;
+  }
+  .rating {
+    font-size: 8px;
+  }
+  .helperInfo small {
+    font-size: 7px;
+    margin-top: 2px;
+  }
+  .nameLine span {
+    font-size: 6px;
+    padding: 2px 5px;
+  }
+  .cardAction strong {
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .cardAction a {
+    font-size: 8px;
+    padding: 6px 11px;
+  }
+  .profileNav span {
+    font-size: 10px;
+  }
+  .profileHero h1 {
+    font-size: 16px;
+  }
+  .profileAvatar > div {
+    width: 58px !important;
+    height: 58px !important;
+    font-size: 20px !important;
+  }
+  .profileHero p,
+  .profileHero small {
+    font-size: 8px;
+  }
+  .profileLayout {
+    display: block;
+    margin-top: 12px;
+  }
+  .profileMain {
+    gap: 8px;
+  }
+  .stats {
+    padding: 9px 0;
+  }
+  .stats strong {
+    font-size: 10px;
+  }
+  .stats small {
+    font-size: 6px;
+  }
+  .package {
+    padding: 13px;
+  }
+  .package h2 {
+    font-size: 17px;
+  }
+  .bookingPanel {
+    display: none;
+  }
+  .mobileActions {
+    position: sticky;
+    bottom: -48px;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    gap: 10px;
+    background: #fff;
+    padding: 10px;
+    margin: 8px -20px -48px;
+    border-top: 1px solid #eadfd7;
+  }
+  .mobileActions button {
+    height: 40px;
+    border-radius: 999px;
+    border: 1px solid #ed6725;
+    background: #fff;
+    color: #d65420;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+  .mobileActions > button:last-child {
+    height: 40px;
+    margin: 0;
+  }
+  .contentCard {
+    padding: 11px;
+  }
+  .reviews {
+    padding: 10px;
+  }
+}
+
+/* Shared project typography scale */
+.page,
+.profilePage {
+  font-family:
+    var(--font-ui),
+    "Poppins",
+    -apple-system,
+    system-ui,
+    sans-serif;
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+.intro h1,
+.sectionTitle h2,
+.topPerson h3,
+.helperInfo h3,
+.profileHero h1,
+.package h2,
+.contentCard h2,
+.reviews h2,
+.bookingPanel h2,
+.stats strong,
+.priceRow strong,
+.cardAction strong {
+  font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+}
+.intro h1 {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+.intro p {
+  font-size: 14px;
+  font-weight: 500;
+}
+.search input {
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.filterButton,
+.filterTabs button {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+.sectionTitle h2 {
+  font-size: 21px;
+  font-weight: 700;
+}
+.sectionTitle p {
+  font-size: 12.5px;
+}
+.topPerson h3,
+.helperInfo h3 {
+  font-size: 15px;
+  font-weight: 700;
+}
+.topPerson p,
+.helperInfo > p {
+  font-size: 12px;
+}
+.rating {
+  font-size: 11.5px;
+}
+.badges span,
+.nameLine span {
+  font-size: 10px;
+}
+.meta,
+.helperInfo small {
+  font-size: 11px;
+}
+.priceRow small {
+  font-size: 11px;
+}
+.priceRow strong,
+.cardAction strong {
+  font-size: 18px;
+}
+.priceRow a,
+.cardAction a {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+.profileNav a {
+  font-size: 13px;
+}
+.profileHero h1 {
+  font-size: 24px;
+}
+.profileHero p {
+  font-size: 13px;
+}
+.profileHero small {
+  font-size: 12px;
+}
+.verificationTags span,
+.verificationTags b {
+  font-size: 10px;
+}
+.stats strong {
+  font-size: 16px;
+}
+.stats small {
+  font-size: 11px;
+}
+.package > small {
+  font-size: 11px;
+}
+.package h2 {
+  font-size: 28px;
+}
+.package h2 span {
+  font-family: var(--font-ui), "Poppins", sans-serif;
+  font-size: 12px;
+}
+.package > div {
+  font-size: 12px;
+}
+.contentCard h2,
+.reviews h2,
+.bookingPanel h2 {
+  font-size: 16px;
+  font-weight: 700;
+}
+.contentCard p {
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+.skillTags span {
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.availability {
+  font-size: 13px;
+}
+.verifiedBox div {
+  font-size: 11.5px;
+}
+.verifiedBox strong {
+  font-size: 13px;
+}
+.reviewsTitle span {
+  font-size: 12px;
+}
+.reviews article strong {
+  font-size: 12.5px;
+}
+.reviews article div span {
+  font-size: 11px;
+}
+.reviews article p {
+  font-size: 12.5px;
+}
+.reviews article small {
+  font-size: 10.5px;
+}
+.bookingPanel > p {
+  font-size: 13px;
+}
+.bookingPanel label {
+  font-size: 11.5px;
+}
+.bookingPanel input,
+.bookingPanel select,
+.bookingPanel textarea {
+  font-family: inherit;
+  font-size: 13px;
+}
+.bookingPanel > button,
+.mobileActions button {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+@media (max-width: 768px) {
+  .intro h1 {
+    font-size: 30px;
+  }
+  .intro p {
+    font-size: 14px;
+  }
+  .search input {
+    font-size: 13.5px;
+  }
+  .filterButton,
+  .filterTabs button {
+    font-size: 12px;
+  }
+  .sectionTitle h2 {
+    font-size: 21px;
+  }
+  .sectionTitle p {
+    font-size: 12.5px;
+  }
+  .topPerson h3,
+  .helperInfo h3 {
+    font-size: 14px;
+  }
+  .topPerson p,
+  .helperInfo > p {
+    font-size: 11.5px;
+  }
+  .rating {
+    font-size: 11px;
+  }
+  .badges span,
+  .nameLine span {
+    font-size: 9px;
+  }
+  .meta,
+  .helperInfo small {
+    font-size: 10.5px;
+  }
+  .priceRow strong,
+  .cardAction strong {
+    font-size: 16px;
+  }
+  .priceRow a,
+  .cardAction a {
+    font-size: 11.5px;
+  }
+  .profileNav span {
+    font-size: 13px;
+  }
+  .profileHero h1 {
+    font-size: 22px;
+  }
+  .profileHero p {
+    font-size: 12.5px;
+  }
+  .profileHero small {
+    font-size: 11.5px;
+  }
+  .stats strong {
+    font-size: 14px;
+  }
+  .stats small {
+    font-size: 10.5px;
+  }
+  .package h2 {
+    font-size: 24px;
+  }
+  .package > div {
+    font-size: 11.5px;
+  }
+  .contentCard h2,
+  .reviews h2 {
+    font-size: 16px;
+  }
+  .contentCard p {
+    font-size: 13px;
+  }
+  .skillTags span {
+    font-size: 11px;
+  }
+  .availability {
+    font-size: 12.5px;
+  }
+  .reviews article p {
+    font-size: 12px;
+  }
+  .mobileActions button {
+    font-size: 12px;
+  }
+}
+/* Maid profile typography normalization */
+.profilePage,
+.profilePage button,
+.profilePage input,
+.profilePage select,
+.profilePage textarea {
+  font-family:
+    var(--font-ui),
+    "Poppins",
+    -apple-system,
+    system-ui,
+    sans-serif;
+}
+.profilePage {
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+.profilePage h1,
+.profilePage h2,
+.profilePage h3,
+.stats strong,
+.package h2 {
+  font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+  letter-spacing: -0.02em;
+}
+.profileNav a {
+  font-size: 13px;
+  font-weight: 700;
+}
+.profileHero h1 {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+.profileHero p {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.profileHero small {
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.verificationTags span,
+.verificationTags b {
+  font-family: var(--font-ui), "Poppins", sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.stats strong {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.stats small {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.package > small {
+  font-size: 11px;
+  font-weight: 700;
+}
+.package h2 {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.package h2 span {
+  font-family: var(--font-ui), "Poppins", sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.package > div {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.contentCard h2,
+.reviews h2,
+.bookingPanel h2 {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.contentCard p {
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.65;
+}
+.skillTags span {
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.availability {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.availability dt {
+  font-weight: 500;
+}
+.availability dd {
+  font-weight: 700;
+}
+.verifiedBox strong {
+  font-size: 13px;
+  font-weight: 700;
+}
+.verifiedBox span {
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.reviewsTitle span {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.reviews article strong {
+  font-size: 13px;
+  font-weight: 700;
+}
+.reviews article div span {
+  font-size: 11px;
+}
+.reviews article p {
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+.reviews article small {
+  font-size: 10.5px;
+  font-weight: 500;
+}
+.bookingPanel > p {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.55;
+}
+.bookingPanel label {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.bookingPanel input,
+.bookingPanel select,
+.bookingPanel textarea {
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.bookingPanel > button {
+  font-size: 13px;
+  font-weight: 600;
+}
+@media (max-width: 768px) {
+  .profileHero h1 {
+    font-size: 24px;
+  }
+  .profileHero p {
+    font-size: 13.5px;
+  }
+  .profileHero small {
+    font-size: 12px;
+  }
+  .stats strong {
+    font-size: 14px;
+  }
+  .stats small {
+    font-size: 10.5px;
+  }
+  .package h2 {
+    font-size: 24px;
+  }
+  .package > div {
+    font-size: 11.5px;
+  }
+  .contentCard h2,
+  .reviews h2 {
+    font-size: 16px;
+  }
+  .contentCard p {
+    font-size: 13px;
+  }
+  .availability {
+    font-size: 12.5px;
+  }
+  .reviews article p {
+    font-size: 12px;
+  }
+  .mobileActions button {
+    font-family: var(--font-ui), "Poppins", sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+  }
+}
+/* Top rated horizontal scrolling */
+.topScroller {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto !important;
+  overflow-y: hidden;
+  padding: 2px 2px 12px;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 2px;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(184, 79, 18, 0.35) transparent;
+}
+.topScroller > .topCard {
+  flex: 0 0 286px !important;
+  width: 286px !important;
+  min-width: 286px;
+  scroll-snap-align: start;
+  scroll-snap-stop: normal;
+}
+.topScroller::-webkit-scrollbar {
+  display: block !important;
+  height: 6px;
+}
+.topScroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+.topScroller::-webkit-scrollbar-thumb {
+  background: rgba(184, 79, 18, 0.35);
+  border-radius: 999px;
+}
+.topScroller::-webkit-scrollbar-thumb:hover {
+  background: rgba(184, 79, 18, 0.55);
+}
+@media (max-width: 768px) {
+  .topScroller {
+    margin-right: -20px;
+    padding-right: 20px;
+  }
+  .topScroller > .topCard {
+    flex-basis: 230px !important;
+    width: 230px !important;
+    min-width: 230px;
+  }
+}
+/* City filter modal */
+.cityModalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(25, 17, 12, 0.48);
+  backdrop-filter: blur(3px);
+}
+.cityModal {
+  width: min(480px, 100%);
+  max-height: min(680px, calc(100vh - 40px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #eadfd7;
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(38, 22, 13, 0.24);
+  font-family: var(--font-ui), "Poppins", sans-serif;
+}
+.cityModal > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid #eee4dc;
+}
+.cityModal > header h2 {
+  margin: 0;
+  font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+  font-size: 21px;
+  font-weight: 700;
+}
+.cityModal > header p {
+  margin: 3px 0 0;
+  color: #846f61;
+  font-size: 12.5px;
+}
+.cityModal > header > button {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #f5eee8;
+  color: #6b5547;
+  font-size: 23px;
+  line-height: 1;
+  cursor: pointer;
+}
+.citySearch {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 14px 16px 10px;
+  padding: 0 13px;
+  border: 1px solid #ded3ca;
+  border-radius: 11px;
+  background: #fff;
+}
+.citySearch input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font:
+    500 13.5px var(--font-ui),
+    "Poppins",
+    sans-serif;
+  color: #2b1d15;
+}
+.cityList {
+  min-height: 120px;
+  max-height: 470px;
+  overflow-y: auto;
+  padding: 0 10px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(184, 79, 18, 0.3) transparent;
+}
+.cityList > button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 0;
+  border-bottom: 1px solid #f1e9e3;
+  background: transparent;
+  color: #2f2119;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+.cityList > button:hover {
+  background: #fff8f1;
+}
+.cityList > button span {
+  font-size: 13px;
+  font-weight: 600;
+}
+.cityList > button small {
+  color: #9a8272;
+  font-size: 10.5px;
+  font-weight: 500;
+}
+.cityList > .selectedCity {
+  background: #fff0e5;
+  color: #c6521c;
+  border-radius: 9px;
+  border-bottom-color: transparent;
+}
+.cityList > .selectedCity span {
+  font-weight: 700;
+}
+.cityStatus {
+  padding: 28px 12px;
+  color: #8d7667;
+  font-size: 13px;
+  text-align: center;
+}
+@media (max-width: 768px) {
+  .cityModalBackdrop {
+    align-items: end;
+    padding: 0;
+  }
+  .cityModal {
+    width: 100%;
+    max-height: 82vh;
+    border-radius: 20px 20px 0 0;
+  }
+  .cityModal > header {
+    padding: 18px 18px 13px;
+  }
+  .cityModal > header h2 {
+    font-size: 20px;
+  }
+  .citySearch {
+    margin-inline: 14px;
+  }
+  .cityList {
+    max-height: 58vh;
+    padding-bottom: 18px;
+  }
+  .cityList > button {
+    padding: 12px;
+  }
+  .cityList > button span {
+    font-size: 13px;
+  }
+}
+.infiniteScrollStatus {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8d7667;
+  font-family: var(--font-ui), "Poppins", sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+/* Become a Maid registration */
+.introActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.becomeMaidButton {
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 17px;
+  border: 0;
+  border-radius: 12px;
+  background: #ed6725;
+  color: #fff;
+  font-family: var(--font-ui), "Poppins", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(226, 106, 31, 0.2);
+}
+.maidFormBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(25, 17, 12, 0.52);
+  backdrop-filter: blur(4px);
+}
+.maidFormModal {
+  width: min(720px, 100%);
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #eadfd7;
+  border-radius: 20px;
+  box-shadow: 0 26px 80px rgba(38, 22, 13, 0.28);
+  font-family: var(--font-ui), "Poppins", sans-serif;
+}
+.maidFormModal > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px 15px;
+  border-bottom: 1px solid #eee4dc;
+}
+.maidFormModal > header h2 {
+  margin: 0;
+  font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+}
+.maidFormModal > header p {
+  margin: 4px 0 0;
+  color: #806d60;
+  font-size: 12.5px;
+}
+.maidFormModal > header > button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #f5eee8;
+  color: #6b5547;
+  font-size: 23px;
+  cursor: pointer;
+}
+.maidFormModal form {
+  overflow-y: auto;
+  padding: 18px 22px 20px;
+}
+.maidFormGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.maidFormGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.maidFormGrid label > span {
+  color: #625247;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.maidFormGrid input,
+.maidFormGrid select,
+.maidFormGrid textarea {
+  width: 100%;
+  border: 1px solid #ded3ca;
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px 12px;
+  outline: 0;
+  color: #2e2119;
+  font:
+    500 13.5px/1.5 var(--font-ui),
+    "Poppins",
+    sans-serif;
+}
+.maidFormGrid input:focus,
+.maidFormGrid select:focus,
+.maidFormGrid textarea:focus {
+  border-color: #e67a3c;
+  box-shadow: 0 0 0 3px rgba(230, 122, 60, 0.12);
+}
+.maidFormGrid input[readonly] {
+  background: #f7f2ec;
+  color: #75685f;
+}
+.maidFormGrid textarea {
+  min-height: 78px;
+  resize: vertical;
+}
+.maidFormWide {
+  grid-column: 1/-1;
+}
+.maidFormModal form > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #eee5de;
+}
+.maidFormModal form > footer button {
+  min-height: 42px;
+  padding: 0 17px;
+  border-radius: 10px;
+  border: 1px solid #e2d6cd;
+  background: #fff;
+  color: #624d40;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.maidFormModal form > footer button[type="submit"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-color: #ed6725;
+  background: #ed6725;
+  color: #fff;
+}
+.maidFormModal form > footer button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+@media (max-width: 768px) {
+  .introActions {
+    gap: 6px;
+  }
+  .becomeMaidButton {
+    height: 38px;
+    padding: 0 12px;
+    font-size: 11.5px;
+  }
+  .notification {
+    display: none;
+  }
+  .maidFormBackdrop {
+    align-items: end;
+    padding: 0;
+  }
+  .maidFormModal {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 20px 20px 0 0;
+  }
+  .maidFormModal > header {
+    padding: 17px 16px 13px;
+  }
+  .maidFormModal > header h2 {
+    font-size: 20px;
+  }
+  .maidFormModal form {
+    padding: 15px 16px 18px;
+  }
+  .maidFormGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .maidFormWide {
+    grid-column: auto;
+  }
+  .maidFormModal form > footer {
+    position: sticky;
+    bottom: -18px;
+    margin-inline: -16px;
+    padding: 12px 16px 18px;
+    background: #fff;
+  }
+  .maidFormModal form > footer button[type="submit"] {
+    flex: 1;
+    justify-content: center;
+  }
+}
+.ownerActions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+}
+.ownerActions button {
+  border: 1px solid #e5c7b5;
+  border-radius: 7px;
+  background: #fff;
+  color: #b75220;
+  padding: 5px 8px;
+  font-family: var(--font-ui), "Poppins", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ownerActions button:last-child {
+  border-color: #ecc9c3;
+  color: #a93e2d;
+  background: #fff7f5;
+}
+.ownerActions button:hover {
+  background: #fff0e5;
+}
+.bookingPanel > .desktopChatButton {
+  background: #fff;
+  color: #d65420;
+  border: 1.5px solid #ed6725;
+  margin-top: 16px;
+}
+.bookingPanel > .desktopChatButton + button {
+  margin-top: 10px;
+}
+.cardAction > .maidCardChat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #ed6725;
+  border-radius: 999px;
+  background: #fff;
+  color: #cc531e;
+  padding: 7px 13px;
+  font:
+    600 12px var(--font-ui),
+    "Poppins",
+    sans-serif;
+  cursor: pointer;
+}
+@media (max-width: 768px) {
+  .cardAction > .maidCardChat {
+    padding: 6px 11px;
+    font-size: 11.5px;
+  }
+}
+.topCardActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.topCardActions button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #ed6725;
+  border-radius: 999px;
+  background: #fff;
+  color: #cc531e;
+  padding: 7px 12px;
+  font:
+    600 12px var(--font-ui),
+    "Poppins",
+    sans-serif;
+  cursor: pointer;
+}
+.helperCard[role="link"] {
+  cursor: pointer;
+}
+.helperCard[role="link"]:focus-visible {
+  outline: 2px solid #ed6725;
+  outline-offset: 2px;
+}
+@media (max-width: 768px) {
+  .topCardActions {
+    gap: 4px;
+  }
+  .topCardActions button {
+    padding: 6px 9px;
+    font-size: 8px;
+  }
+}
+.serviceMultiSelect {
+  border: 0;
+  padding: 0;
+  margin: 12px 0 0;
+}
+.serviceMultiSelect legend {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.serviceMultiSelect > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 7px;
+}
+.bookingPanel .serviceMultiSelect label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 7px 10px;
+  border: 1px solid #eadfd7;
+  border-radius: 999px;
+  background: #fff;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+.bookingPanel .serviceMultiSelect input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  accent-color: #ed6725;
+}
+.serviceMultiSelect span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #564237;
+}
+.ownProfileLayout {
+  grid-template-columns: minmax(0, 1fr);
+}
+.bookingRequestsSection {
+  margin-top: 22px;
+}
+.bookingRequestsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.bookingRequestsHeader h2 {
+  margin: 0;
+  font:
+    700 20px var(--font-display),
+    "Space Grotesk",
+    "Poppins",
+    sans-serif;
+}
+.bookingRequestsHeader p {
+  margin: 3px 0 0;
+  color: #8b7261;
+  font-size: 12.5px;
+}
+.bookingRequestsHeader > span {
+  display: grid;
+  place-items: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #fff0e8;
+  color: #cc531e;
+  font-size: 12px;
+  font-weight: 700;
+}
+.bookingRequestsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.bookingRequestsGrid article {
+  padding: 15px;
+  background: #fff;
+  border: 1px solid #eadfd7;
+  border-radius: 12px;
+  box-shadow: 0 3px 10px rgba(59, 34, 20, 0.05);
+}
+.bookingRequestsGrid header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.bookingRequestsGrid header strong {
+  font-size: 14px;
+  color: #23160f;
+}
+.bookingRequestsGrid time {
+  font-size: 10px;
+  color: #927765;
+}
+.bookingRequestServices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 9px;
+}
+.bookingRequestServices span {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #fff2e8;
+  color: #cb5420;
+  font-size: 10px;
+  font-weight: 600;
+}
+.bookingRequestsGrid p {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin: 10px 0 0;
+  color: #725b4c;
+  font-size: 11.5px;
+}
+.bookingRequestsGrid small {
+  display: block;
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid #f0e5dd;
+  color: #725b4c;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.bookingRequestsStatus {
+  padding: 28px;
+  text-align: center;
+  background: #fff;
+  border: 1px solid #eadfd7;
+  border-radius: 12px;
+  color: #8b7261;
+  font-size: 13px;
+}
+@media (max-width: 768px) {
+  .bookingRequestsSection {
+    margin-top: 14px;
+  }
+  .bookingRequestsHeader h2 {
+    font-size: 17px;
+  }
+  .bookingRequestsGrid {
+    grid-template-columns: 1fr;
+  }
+  .bookingRequestsGrid article {
+    padding: 12px;
+  }
+}
+.bookingRequestControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bookingRequestControls select {
+  height: 30px;
+  border: 1px solid #e5c7b5;
+  border-radius: 7px;
+  background: #fff8f2;
+  color: #6b4530;
+  padding: 0 7px;
+  font:
+    600 10px var(--font-ui),
+    "Poppins",
+    sans-serif;
+  cursor: pointer;
+}
+.bookingRequestControls select:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+@media (max-width: 520px) {
+  .bookingRequestsGrid header {
+    align-items: flex-start;
+  }
+  .bookingRequestControls {
+    align-items: flex-end;
+    flex-direction: column;
+    gap: 5px;
+  }
+}
+.maidReviewFormCard {
+  padding: 15px;
+  background: #fff;
+  border: 1px solid #eadfd7;
+  border-radius: 12px;
+}
+.maidReviewFormCard h2 {
+  margin: 0;
+  font:
+    700 16px var(--font-display),
+    "Space Grotesk",
+    "Poppins",
+    sans-serif;
+}
+.maidReviewFormCard > p {
+  margin: 4px 0 12px;
+  color: #8b7261;
+  font-size: 12px;
+}
+.maidReviewFormCard form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.maidReviewStars {
+  display: flex;
+  gap: 4px;
+}
+.maidReviewStars button {
+  border: 0;
+  background: transparent;
+  color: #d7c9bd;
+  padding: 0;
+  font-size: 25px;
+  line-height: 1;
+  cursor: pointer;
+}
+.maidReviewStars .selectedStar {
+  color: #d99a12;
+}
+.maidReviewFormCard textarea {
+  min-height: 86px;
+  resize: vertical;
+  border: 1px solid #eadfd7;
+  border-radius: 9px;
+  padding: 10px;
+  font:
+    500 13px var(--font-ui),
+    "Poppins",
+    sans-serif;
+}
+.maidReviewFormCard form > button {
+  align-self: flex-start;
+  border: 0;
+  border-radius: 999px;
+  background: #ed6725;
+  color: #fff;
+  padding: 9px 16px;
+  font:
+    600 12px var(--font-ui),
+    "Poppins",
+    sans-serif;
+  cursor: pointer;
+}
+.maidReviewFormCard form > button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
