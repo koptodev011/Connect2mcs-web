@@ -1,0 +1,145 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.loading {
+  padding: 80px 24px;
+  text-align: center;
+  color: #6b6256;
+  font-size: 14px;
+}
+
+.notFound {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+  padding: 80px 24px;
+  text-align: center;
+}
+
+.notFoundTitle {
+  color: #0f0e0c;
+  font: 700 22px var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+}
+
+.notFoundCopy {
+  margin: 0;
+  color: #6b6256;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.notFoundBtn {
+  text-decoration: none;
+}
+
+.backLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  color: #6b6256;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.card { overflow: hidden; }
+
+.content { padding: 32px 36px; }
+
+.headingRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.title {
+  margin: 0 0 12px;
+  color: #0f0e0c;
+  font: 700 32px/1.2 var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #3a342b;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.priceWrap { text-align: right; }
+
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.headActions {
+  display: flex;
+  gap: 8px;
+}
+
+.price {
+  color: #b84f12;
+  font: 700 36px var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.sellerRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+  padding: 24px 0;
+  border-top: 1px solid rgba(15, 14, 12, 0.08);
+  border-bottom: 1px solid rgba(15, 14, 12, 0.08);
+}
+
+.sellerName {
+  color: #0f0e0c;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.sellerMeta {
+  color: #6b6256;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.description {
+  max-width: 640px;
+  margin: 24px 0 0;
+  color: #3a342b;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+@media (max-width: 700px) {
+  .content { padding: 24px 20px; }
+  .title { font-size: 27px; }
+}

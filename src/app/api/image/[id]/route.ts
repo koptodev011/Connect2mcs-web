@@ -25,7 +25,9 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
         ? 'image/gif'
         : base64.includes('image/jpeg') || base64.startsWith('/9j/')
           ? 'image/jpeg'
-          : 'image/png';
+          : base64.includes('image/svg') || base64.startsWith('PD94bWwg') || base64.includes('PHN2Zy')
+            ? 'image/svg+xml'
+            : 'image/png';
 
     return new NextResponse(buffer, {
       headers: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=3600' },

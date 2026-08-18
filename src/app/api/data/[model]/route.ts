@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fetchModel, fetchModelRecord } from "@/lib/idempiere";
 import { Tone } from "@/lib/tokens";
+import { formatPrice } from "@/lib/currency";
 
 // Helper to cycle through tones based on index
 const tones: Tone[] = ["blue", "brick", "saffron", "green", "gold"];
@@ -1381,19 +1382,49 @@ export async function GET(
 
       case "marketplace":
         const rawMarket = await fetchModel("MCS_MarketPlaces");
+        const conditionLabels: Record<string, string> = {
+          N: "New",
+          LN: "Like new",
+          G: "Good",
+          U: "Used",
+        };
         data = rawMarket.map((record: any) => {
           // Description packs "Condition · $Price" e.g. "Like new · $480"
           const parts = splitDot(record.Description);
           const priceStr = parts.find((p) => p.includes("$"));
           const conditionStr = parts.find((p) => !p.includes("$"));
+          const logo = record.MCS_Logo_ID;
+          const logoData = logo?.data;
+          const logoId = logo?.id;
+          const condRaw = record.MCS_Condition;
+          const condCode =
+            typeof condRaw === "string" ? condRaw : condRaw?.id || "";
+          const condLabelInline =
+            typeof condRaw === "object" && condRaw
+              ? String(condRaw.identifier || "")
+              : "";
+          const condition =
+            conditionLabels[condCode] ||
+            condLabelInline ||
+            (typeof condRaw === "string" ? condRaw : "") ||
+            conditionStr ||
+            "Used";
+          const currencyIso = record.C_Currency_ID?.identifier || "";
           return {
             id: record.id.toString(),
             title: record.Name,
-            price: priceStr || (record.Price ? `$${record.Price}` : "—"),
-            currency: record.C_Currency_ID?.identifier || "$",
-            condition: conditionStr || record.MCS_Condition || "Used",
+            price: record.Price
+              ? formatPrice(record.Price, currencyIso)
+              : priceStr || "—",
+            currency: currencyIso,
+            condition,
             city: record.Location || "City",
             desc: record.Description || "",
+            image: logoId
+              ? `/api/image/${logoId}`
+              : logoData
+                ? `data:image/svg+xml;base64,${logoData}`
+                : undefined,
             seller:
               record.MCS_PostedBy_ID?.identifier ||
               record.CreatedBy?.identifier ||
@@ -1402,11 +1433,29 @@ export async function GET(
             when: record.MCS_StartDate
               ? new Date(record.MCS_StartDate).toLocaleDateString()
               : "Recently",
+            createdAt: record.MCS_StartDate || "",
             tone: getTone(record.id),
             kind: "ornament",
             mandal: record.MCS_Mandals_ID?.identifier || "-",
             sold: record.IsSold || false,
+            qty: Number(record.MCS_QTY || 0) || 1,
             featured: record.MCS_IsFeatured || false,
+            ownerId: record.MCS_PostedBy_ID?.id ?? null,
+            status:
+              typeof record.MCS_Status === "string"
+                ? record.MCS_Status
+                : record.MCS_Status?.id || "PB",
+            soldDate: record.MCS_SoldDate || "",
+            currencyId: record.C_Currency_ID?.id ?? null,
+            categoryId: record.MCS_MarketPlace_Category_ID?.id ?? null,
+            cityId: record.C_City_ID?.id ?? null,
+            countryId: record.C_Country_ID?.id ?? null,
+            adType:
+              (typeof record.MCS_AdType === "string"
+                ? record.MCS_AdType
+                : record.MCS_AdType?.id) === "B"
+                ? "Business"
+                : "Personal",
           };
         });
         break;

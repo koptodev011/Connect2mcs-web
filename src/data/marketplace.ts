@@ -13,11 +13,22 @@ export interface MarketplaceListing {
   seller: string;
   cat: string;
   when: string;
+  createdAt?: string;
   tone: Tone;
   kind: SceneKind;
   mandal: string;
+  image?: string;
   sold?: boolean;
+  qty?: number;
   featured?: boolean;
+  ownerId?: number | null;
+  status?: string;
+  soldDate?: string;
+  adType?: string;
+  currencyId?: number | null;
+  categoryId?: number | null;
+  cityId?: number | null;
+  countryId?: number | null;
 }
 
 export const marketplaceListings: MarketplaceListing[] = [

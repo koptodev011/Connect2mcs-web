@@ -10,6 +10,7 @@ import { auth, db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, setDoc, addDoc, updateDoc, query, where, getDoc, orderBy, increment } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getOrCreateAccommodationChat } from '@/lib/accommodation-chat';
+import { getOrCreateMarketplaceChat } from '@/lib/marketplace-chat';
 
 function ChatContent() {
   const router = useRouter();
@@ -23,6 +24,11 @@ function ChatContent() {
   const housingPropertyTitle = searchParams.get('propertyTitle') || '';
   const housingPropertyPrice = searchParams.get('propertyPrice') || '';
   const housingPropertyLocation = searchParams.get('propertyLocation') || '';
+  const marketplaceOwnerId = searchParams.get('ownerId') || '';
+  const marketplaceListingId = searchParams.get('listingId') || '';
+  const marketplaceListingTitle = searchParams.get('listingTitle') || '';
+  const marketplaceListingPrice = searchParams.get('listingPrice') || '';
+  const marketplaceListingLocation = searchParams.get('listingLocation') || '';
   const taxiRequestId = searchParams.get('taxiRequestId');
   const taxiQuoteId = searchParams.get('taxiQuoteId');
   const taxiFare = searchParams.get('taxiFare');
@@ -44,6 +50,7 @@ function ChatContent() {
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const housingChatStarted = useRef(false);
+  const marketplaceChatStarted = useRef(false);
 
   // 1. Auth Listener
   useEffect(() => {
@@ -168,9 +175,53 @@ function ChatContent() {
     toast,
   ]);
 
+  // Marketplace chat follows the housing schema: resolve the ERP seller to a
+  // Firebase user, then reuse or create a participant chat.
+  useEffect(() => {
+    if (
+      chatSource !== 'marketplace' ||
+      !currentUser ||
+      !queryUser ||
+      marketplaceChatStarted.current
+    ) {
+      return;
+    }
+
+    marketplaceChatStarted.current = true;
+    getOrCreateMarketplaceChat(currentUser, {
+      ownerId: marketplaceOwnerId,
+      sellerName: queryUser,
+      listingId: marketplaceListingId,
+      listingTitle: marketplaceListingTitle,
+      listingPrice: marketplaceListingPrice,
+      listingLocation: marketplaceListingLocation,
+    })
+      .then((chatId) => {
+        setActiveId(chatId);
+        router.replace(`/chat?chatId=${encodeURIComponent(chatId)}`);
+      })
+      .catch((error: unknown) => {
+        toast.add(
+          error instanceof Error ? error.message : 'Could not open seller chat.',
+          'error',
+        );
+      });
+  }, [
+    chatSource,
+    currentUser,
+    marketplaceListingId,
+    marketplaceListingLocation,
+    marketplaceListingPrice,
+    marketplaceListingTitle,
+    marketplaceOwnerId,
+    queryUser,
+    router,
+    toast,
+  ]);
+
   // Handle query params (?user=) redirection
   useEffect(() => {
-    if (chatSource === 'housing' || !queryUser || usersList.length === 0 || !currentUser) return;
+    if (chatSource === 'housing' || chatSource === 'marketplace' || !queryUser || usersList.length === 0 || !currentUser) return;
     const targetUser = usersList.find(u =>
       String(u.name || u.displayName || '').toLowerCase() === queryUser.toLowerCase()
     );

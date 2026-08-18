@@ -1,12 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, Btn, Field } from './primitives';
 import { useGlobalToast } from './primitives';
 import { C, F } from '@/lib/tokens';
 import Icon from './Icon';
+import { useLocation } from '@/components/LocationContext';
 import { db } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
+
+function fileToBase64(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || '');
+      resolve(result.includes(',') ? result.substring(result.indexOf(',') + 1) : result);
+    };
+    reader.onerror = () => reject(new Error('Could not read the selected image.'));
+    reader.readAsDataURL(file);
+  });
+}
 
 // ── Post a Job Modal ──────────────────────────────────────────────────────────
 export function PostJobModal({ isOpen, onClose, MCS_Type = 'J' }: { isOpen: boolean; onClose: () => void; MCS_Type?: string }) {
@@ -135,16 +148,148 @@ export function HostEventModal({ isOpen, onClose }: { isOpen: boolean; onClose: 
 }
 
 // ── Post Listing Modal ────────────────────────────────────────────────────────
-export function PostListingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+type MarketplaceCategory = { id: string | number; Name?: string; identifier?: string; IsActive?: boolean };
+type CurrencyRecord = { id: string | number; ISO_Code?: string; C_ISO_Code?: string; Name?: string };
+type CountryOption = { id: string | number; name: string; code?: string };
+type CityOption = { id: string | number; name: string; countryId?: string | number; country?: string };
+
+const FALLBACK_CATEGORIES = ['Electronics', 'Furniture', 'Books', 'Vehicles', 'Kitchen', 'Clothing', 'Kids & Toys', 'Other'];
+const CURRENCY_BY_REGION: Record<string, string> = {
+  US: 'USD', CA: 'CAD', GB: 'GBP', AU: 'AUD', IN: 'INR', AE: 'AED', NZ: 'NZD',
+  SG: 'SGD', MY: 'MYR', ZA: 'ZAR', SA: 'SAR', QA: 'QAR', KW: 'KWD',
+  DE: 'EUR', FR: 'EUR', ES: 'EUR', IT: 'EUR', NL: 'EUR', PT: 'EUR', IE: 'EUR', BE: 'EUR', AT: 'EUR', CH: 'CHF', SE: 'SEK', NO: 'NOK', DK: 'DKK',
+};
+
+export function PostListingModal({ isOpen, onClose, onPosted }: { isOpen: boolean; onClose: () => void; onPosted?: () => void }) {
   const toast = useGlobalToast();
-  const [form, setForm] = useState({ title: '', price: '', cat: 'Electronics', condition: 'Good', city: '', desc: '' });
+  const { location } = useLocation();
+  const [form, setForm] = useState({ title: '', price: '', qty: '1', cat: 'Electronics', condition: 'Good', countryId: '', cityId: '', desc: '', adType: 'Personal', currencyId: '' });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [categories, setCategories] = useState<MarketplaceCategory[]>([]);
+  const [currencies, setCurrencies] = useState<CurrencyRecord[]>([]);
+  const [countries, setCountries] = useState<CountryOption[]>([]);
+  const [cities, setCities] = useState<CityOption[]>([]);
   const set = (k: keyof typeof form) => (v: string) => setForm(f => ({ ...f, [k]: v }));
 
-  function submit() {
+  const handleCountryChange = (value: string) => {
+    const country = countries.find(c => String(c.id) === value);
+    const code = CURRENCY_BY_REGION[String(country?.code || '').toUpperCase()];
+    const cur = code
+      ? currencies.find(c => (c.ISO_Code || c.C_ISO_Code || '').toUpperCase() === code)
+      : undefined;
+    setForm(f => ({ ...f, countryId: value, cityId: '', currencyId: cur ? String(cur.id) : '' }));
+    setCities([]);
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    fetch('/api/v1/models/MCS_MarketPlace_Category', { cache: 'no-store' })
+      .then(res => res.ok ? res.json() : Promise.reject(new Error('Could not load categories')))
+      .then((data: { records?: MarketplaceCategory[] }) => {
+        const records = Array.isArray(data.records) ? data.records : [];
+        setCategories(records.filter(c => c.IsActive !== false && (c.Name || '').trim()));
+      })
+      .catch(error => { console.error('Could not load marketplace categories:', error); setCategories([]); });
+    fetch('/api/v1/models/C_Currency', { cache: 'no-store' })
+      .then(res => res.ok ? res.json() : Promise.reject(new Error('Could not load currencies')))
+      .then((data: { records?: CurrencyRecord[] }) => setCurrencies(Array.isArray(data.records) ? data.records : []))
+      .catch(error => { console.error('Could not load currencies:', error); setCurrencies([]); });
+    fetch('/api/data/countries', { cache: 'no-store' })
+      .then(res => res.ok ? res.json() : Promise.reject(new Error('Could not load countries')))
+      .then((data: CountryOption[]) => {
+        const list = Array.isArray(data) ? data : [];
+        setCountries(list);
+        if (location.countryId && list.some(c => String(c.id) === String(location.countryId))) {
+          setForm(f => (f.countryId ? f : { ...f, countryId: String(location.countryId) }));
+        }
+      })
+      .catch(error => { console.error('Could not load countries:', error); setCountries([]); });
+  }, [isOpen, location.countryId]);
+
+  useEffect(() => {
+    if (!form.countryId) return;
+    const controller = new AbortController();
+    fetch(`/api/v1/models/C_City?countryId=${encodeURIComponent(form.countryId)}`, { cache: 'no-store', signal: controller.signal })
+      .then(res => res.ok ? res.json() : Promise.reject(new Error('Could not load cities')))
+      .then((data: { records?: CityOption[] }) => setCities(Array.isArray(data.records) ? data.records : []))
+      .catch(error => { if (!controller.signal.aborted) { console.error('Could not load cities:', error); setCities([]); } });
+    return () => controller.abort();
+  }, [form.countryId]);
+
+  const categoryNames = categories.length > 0
+    ? categories.map(c => (c.Name || '').trim()).filter(Boolean)
+    : FALLBACK_CATEGORIES;
+  const categoryId = categories.find(c => (c.Name || '').trim() === form.cat)?.id ?? 0;
+
+  const selectedCountry = countries.find(c => String(c.id) === form.countryId);
+  const selectedCity = cities.find(c => String(c.id) === form.cityId);
+
+  const currencyCode = CURRENCY_BY_REGION[String(selectedCountry?.code || '').toUpperCase()];
+  const derivedCurrency = currencyCode
+    ? currencies.find(c => (c.ISO_Code || c.C_ISO_Code || '').toUpperCase() === currencyCode)
+    : currencies[0];
+  const selectedCurrency = form.currencyId
+    ? currencies.find(c => String(c.id) === form.currencyId)
+    : derivedCurrency;
+
+  async function submit() {
     if (!form.title || !form.price) { toast.add('Please fill in title and price', 'error'); return; }
-    toast.add('Listing posted! Buyers can now contact you.', 'success');
-    onClose();
-    setForm({ title: '', price: '', cat: 'Electronics', condition: 'Good', city: '', desc: '' });
+    if (!form.countryId || !form.cityId) { toast.add('Please select a country and city', 'error'); return; }
+    let userId = '';
+    try { userId = String(JSON.parse(localStorage.getItem('mcs_user') || '{}').id || ''); } catch {}
+    if (!userId) { toast.add('Please sign in before posting a listing.', 'error'); return; }
+    if (imageFile) {
+      if (!imageFile.type.startsWith('image/')) { toast.add('Please select a valid image file.', 'error'); return; }
+      if (imageFile.size > 5 * 1024 * 1024) { toast.add('Image size must be 5 MB or less.', 'error'); return; }
+    }
+
+    setSubmitting(true);
+    try {
+      const logoData = imageFile ? await fileToBase64(imageFile) : '';
+      const locationValue = [selectedCity?.name, selectedCountry?.name].filter(Boolean).join(', ');
+      const now = new Date();
+      const end = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      const response = await fetch('/api/v1/models/MCS_MarketPlaces', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          C_Currency_ID: { id: Number(selectedCurrency?.id) || 0 },
+          C_Country_ID: { id: Number(form.countryId) || 0 },
+          C_City_ID: { id: Number(form.cityId) || 0 },
+          MCS_MarketPlace_Category_ID: { id: Number(categoryId) || 0, identifier: form.cat },
+          MCS_PostedBy_ID: { id: Number(userId) || 0 },
+          MCS_Logo_ID: logoData ? { data: logoData, name: imageFile?.name || 'Listing image' } : { id: 0 },
+          Value: form.title,
+          Name: form.title,
+          Description: form.desc.trim() || 'Marketplace listing created from Postman',
+          Location: locationValue,
+          Price: form.price,
+          qty: Number(form.qty) || 1,
+          MCS_Condition: form.condition,
+          MCS_StartDate: now.toISOString(),
+          MCS_EndDate: end.toISOString(),
+          MCS_IsFeatured: false,
+          IsSold: false,
+          IsActive: true,
+          MCS_AdType: form.adType,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Could not post listing');
+      toast.add('Listing posted! Buyers can now contact you.', 'success');
+      onClose();
+      onPosted?.();
+      setForm({ title: '', price: '', qty: '1', cat: 'Electronics', condition: 'Good', countryId: '', cityId: '', desc: '', adType: 'Personal', currencyId: '' });
+      setCities([]);
+      setImageFile(null);
+    } catch (error) {
+      console.error('Post listing failed:', error);
+      toast.add(error instanceof Error ? error.message : 'Could not post listing.', 'error');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -152,13 +297,14 @@ export function PostListingModal({ isOpen, onClose }: { isOpen: boolean; onClose
       <Field label="Item title" value={form.title} onChange={set('title')} placeholder="MacBook Pro 2022, Kadhai set…"/>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <Field label="Price" value={form.price} onChange={set('price')} placeholder="$250 or Free"/>
-        <label style={{ display: 'block', marginBottom: 16 }}>
-          <div style={{ fontSize: 11.5, color: C.ink3, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>Category</div>
-          <select value={form.cat} onChange={e => set('cat')(e.target.value)} style={{ width: '100%', padding: '10px 14px', border: `1px solid ${C.lineMid}`, borderRadius: 10, fontSize: 14, fontFamily: 'inherit', background: '#fff', outline: 'none' }}>
-            {['Electronics', 'Furniture', 'Books', 'Vehicles', 'Kitchen', 'Clothing', 'Kids & Toys', 'Other'].map(c => <option key={c}>{c}</option>)}
-          </select>
-        </label>
+        <Field label="Quantity" type="number" value={form.qty} onChange={set('qty')} placeholder="1"/>
       </div>
+      <label style={{ display: 'block', marginBottom: 16 }}>
+        <div style={{ fontSize: 11.5, color: C.ink3, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>Category</div>
+        <select value={form.cat} onChange={e => set('cat')(e.target.value)} style={{ width: '100%', padding: '10px 14px', border: `1px solid ${C.lineMid}`, borderRadius: 10, fontSize: 14, fontFamily: 'inherit', background: '#fff', outline: 'none' }}>
+          {categoryNames.map(c => <option key={c}>{c}</option>)}
+        </select>
+      </label>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <label style={{ display: 'block', marginBottom: 16 }}>
           <div style={{ fontSize: 11.5, color: C.ink3, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>Condition</div>
@@ -166,11 +312,47 @@ export function PostListingModal({ isOpen, onClose }: { isOpen: boolean; onClose
             {['New', 'Like new', 'Good', 'Used'].map(c => <option key={c}>{c}</option>)}
           </select>
         </label>
-        <Field label="Your city" value={form.city} onChange={set('city')} placeholder="Boston, MA"/>
+        <label style={{ display: 'block', marginBottom: 16 }}>
+          <div style={{ fontSize: 11.5, color: C.ink3, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>Ad type</div>
+          <select value={form.adType} onChange={e => set('adType')(e.target.value)} style={{ width: '100%', padding: '10px 14px', border: `1px solid ${C.lineMid}`, borderRadius: 10, fontSize: 14, fontFamily: 'inherit', background: '#fff', outline: 'none' }}>
+            <option>Personal</option>
+            <option>Business</option>
+          </select>
+        </label>
       </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <label style={{ display: 'block', marginBottom: 16 }}>
+          <div style={{ fontSize: 11.5, color: C.ink3, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>Country</div>
+          <select value={form.countryId} onChange={e => handleCountryChange(e.target.value)} style={{ width: '100%', padding: '10px 14px', border: `1px solid ${C.lineMid}`, borderRadius: 10, fontSize: 14, fontFamily: 'inherit', background: '#fff', outline: 'none' }}>
+            <option value="">Select country</option>
+            {countries.map(c => <option key={String(c.id)} value={String(c.id)}>{c.name}</option>)}
+          </select>
+        </label>
+        <label style={{ display: 'block', marginBottom: 16 }}>
+          <div style={{ fontSize: 11.5, color: C.ink3, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>City</div>
+          <select value={form.cityId} onChange={e => set('cityId')(e.target.value)} disabled={!form.countryId} style={{ width: '100%', padding: '10px 14px', border: `1px solid ${C.lineMid}`, borderRadius: 10, fontSize: 14, fontFamily: 'inherit', background: '#fff', outline: 'none' }}>
+            <option value="">{form.countryId ? 'Select city' : 'Select country first'}</option>
+            {cities.map(c => <option key={String(c.id)} value={String(c.id)}>{c.name}</option>)}
+          </select>
+        </label>
+      </div>
+      <label style={{ display: 'block', marginBottom: 16 }}>
+        <div style={{ fontSize: 11.5, color: C.ink3, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>Currency</div>
+        <select value={form.currencyId} onChange={e => set('currencyId')(e.target.value)} style={{ width: '100%', padding: '10px 14px', border: `1px solid ${C.lineMid}`, borderRadius: 10, fontSize: 14, fontFamily: 'inherit', background: '#fff', outline: 'none' }}>
+          <option value="">Auto (from country)</option>
+          {currencies.length > 0
+            ? currencies.map(c => <option key={String(c.id)} value={String(c.id)}>{(c.ISO_Code || c.C_ISO_Code || c.Name || c.id)}</option>)
+            : <option value="100">USD</option>}
+        </select>
+      </label>
+      <label style={{ display: 'block', marginBottom: 16 }}>
+        <div style={{ fontSize: 11.5, color: C.ink3, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>Photo</div>
+        <input type="file" accept="image/*" onChange={e => setImageFile(e.target.files?.[0] || null)} style={{ fontSize: 13, color: C.ink2, width: '100%' }}/>
+        {imageFile && <small style={{ display: 'block', marginTop: 4, color: C.ink3, fontSize: 11.5 }}>{imageFile.name} ({Math.round(imageFile.size / 1024)} KB)</small>}
+      </label>
       <Field label="Description" value={form.desc} onChange={set('desc')} multiline placeholder="Describe the item, any defects, reason for selling…"/>
       <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-        <Btn kind="primary" size="md" full onClick={submit}>Post listing</Btn>
+        <Btn kind="primary" size="md" full onClick={submit} disabled={submitting}>{submitting ? 'Posting…' : 'Post listing'}</Btn>
         <Btn kind="ghost" size="md" onClick={onClose}>Cancel</Btn>
       </div>
     </Modal>
