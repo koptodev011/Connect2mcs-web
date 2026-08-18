@@ -1,119 +1,493 @@
-'use client';
+"use client";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Icon from "@/components/Icon";
+import {
+  Btn,
+  Card,
+  Pill,
+  Tag,
+  SectionHead,
+  PageHeader,
+  Rating,
+  useGlobalToast,
+} from "@/components/primitives";
+import { TiffinProvider } from "@/data/tiffin";
+import { InfoModal, TiffinSubscribeModal } from "@/components/FormModals";
+import BecomeTiffinProviderModal from "./BecomeTiffinProviderModal";
+import { useLocation } from "@/components/LocationContext";
+import styles from "./tiffin.module.css";
 
-import { useState, useEffect } from 'react';
-import { C, F } from '@/lib/tokens';
-import Icon from '@/components/Icon';
-import { Btn, Card, Pill, Tag, Avatar, SectionHead, PageHeader, Rating, useGlobalToast } from '@/components/primitives';
-import { TiffinProvider } from '@/data/tiffin';
-import { toneBg, toneColor } from '@/lib/tones';
-import { BecomeProviderModal, FilterModal, ContactModal, InfoModal, TiffinSubscribeModal } from '@/components/FormModals';
+type CityOption = {
+  id: string;
+  name: string;
+  country?: string;
+  countryId?: string;
+};
+const fallbackFilters = [
+  "All",
+  "Near me",
+  "Vegetarian",
+  "Non-veg",
+  "Jain",
+  "Weekly plan",
+  "Trial box",
+];
+const PAGE_SIZE = 6;
 
-const filters = ['All', 'Near me', 'Vegetarian', 'Non-veg', 'Jain', 'Weekly plan', 'Trial box'];
+const normalizeCategory = (value: string) =>
+  value.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 export default function TiffinPage() {
   const [tiffinData, setTiffinData] = useState<TiffinProvider[]>([]);
+  const [filters, setFilters] = useState(fallbackFilters);
   const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState("All");
+  const [query, setQuery] = useState("");
+  const [providerOpen, setProviderOpen] = useState(false);
+  const [editingProvider, setEditingProvider] = useState<TiffinProvider | null>(
+    null,
+  );
+  const [deletingProviderId, setDeletingProviderId] = useState("");
+  const [cityModalOpen, setCityModalOpen] = useState(false);
+  const [citySearch, setCitySearch] = useState("");
+  const [cities, setCities] = useState<CityOption[]>([]);
+  const [citiesLoading, setCitiesLoading] = useState(false);
+  const [selectedCity, setSelectedCity] = useState("All");
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [sortBy, setSortBy] = useState("Nearest");
+  const [subTarget, setSubTarget] = useState<{
+    name: string;
+    price: string;
+  } | null>(null);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinel = useRef<HTMLDivElement>(null);
+  const { location } = useLocation();
+  const toast = useGlobalToast();
+  const router = useRouter();
 
   useEffect(() => {
-    fetch('/api/data/tiffin')
-      .then(res => res.json())
-      .then(data => {
-        setTiffinData(Array.isArray(data) ? data : []);
-        setLoading(false);
+    fetch("/api/v1/models/MCS_TiffinProvider?top=100&skip=0")
+      .then((response) =>
+        response.ok
+          ? response.json()
+          : Promise.reject(new Error("Unable to load tiffin providers")),
+      )
+      .then((data) => {
+        setTiffinData(Array.isArray(data.records) ? data.records : []);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+
+    fetch("/api/v1/models/MCS_Tiffin_Category")
+      .then((response) =>
+        response.ok
+          ? response.json()
+          : Promise.reject(new Error("Failed to load tiffin categories")),
+      )
+      .then((payload: unknown) => {
+        const records = Array.isArray(payload)
+          ? payload
+          : payload && typeof payload === "object" && "records" in payload
+            ? (payload as { records?: unknown[] }).records || []
+            : [];
+        const categoryNames = records
+          .filter(
+            (record): record is Record<string, unknown> =>
+              !!record &&
+              typeof record === "object" &&
+              record.IsActive !== false,
+          )
+          .map((record) => String(record.Name || record.Value || "").trim())
+          .filter(Boolean);
+
+        if (categoryNames.length) {
+          setFilters(["All", ...Array.from(new Set(categoryNames))]);
+        }
       })
       .catch(console.error);
   }, []);
+  useEffect(() => {
+    if (!cityModalOpen) return;
+    const controller = new AbortController();
+    const countryQuery =
+      location.country !== "All" && location.countryId
+        ? `?countryId=${encodeURIComponent(location.countryId)}`
+        : "";
+    fetch(`/api/v1/models/C_City${countryQuery}`, { signal: controller.signal })
+      .then((response) =>
+        response.ok
+          ? response.json()
+          : Promise.reject(new Error("Unable to load cities")),
+      )
+      .then((data) =>
+        setCities(Array.isArray(data.records) ? data.records : []),
+      )
+      .catch((error) => {
+        if (error.name !== "AbortError")
+          console.error("Cities API error:", error);
+      })
+      .finally(() => setCitiesLoading(false));
+    return () => controller.abort();
+  }, [cityModalOpen, location.country, location.countryId]);
+  const filtered = useMemo(
+    () =>
+      tiffinData
+        .filter((provider) => {
+          const needle = query.trim().toLowerCase();
+          return (
+            !needle ||
+            [
+              provider.name,
+              provider.city,
+              provider.specialty,
+              provider.delivery,
+              provider.mandal,
+              ...provider.menu,
+            ].some((value) => String(value).toLowerCase().includes(needle))
+          );
+        })
+        .filter((provider) => {
+          if (activeFilter === "All" || activeFilter === "Weekly plan") {
+            return true;
+          }
+          if (activeFilter === "Near me") {
+            return (
+              provider.city.includes("Boston") ||
+              provider.city.includes("Edison")
+            );
+          }
+          if (activeFilter === "Vegetarian") return provider.veg;
+          if (activeFilter === "Non-veg") return !provider.veg;
+          if (activeFilter === "Jain") return provider.id === "priya";
+          if (activeFilter === "Trial box") return provider.trial;
 
-  const [activeFilter, setActiveFilter] = useState('All');
-  const [providerOpen, setProviderOpen] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [contactOpen, setContactOpen] = useState(false);
-  const [contactTarget, setContactTarget] = useState('');
-  const [infoOpen, setInfoOpen] = useState(false);
-  const [sortBy, setSortBy] = useState('Nearest');
-  const [subTarget, setSubTarget] = useState<{ name: string; price: string } | null>(null);
-  const toast = useGlobalToast();
+          const categoryText = normalizeCategory(
+            [
+              provider.specialty,
+              ...provider.menu,
+              provider.veg ? "Vegetarian Veg" : "Non-veg Non Vegetarian",
+              provider.trial ? "Trial box" : "",
+            ].join(" "),
+          );
+          return categoryText.includes(normalizeCategory(activeFilter));
+        })
+        .filter(
+          (provider) =>
+            selectedCity === "All" ||
+            provider.city.toLowerCase().includes(selectedCity.toLowerCase()),
+        ),
+    [activeFilter, query, selectedCity, tiffinData],
+  );
+  const filteredCities = useMemo(() => {
+    const needle = citySearch.trim().toLowerCase();
+    return cities.filter(
+      (city) =>
+        !needle ||
+        `${city.name} ${city.country || ""}`.toLowerCase().includes(needle),
+    );
+  }, [cities, citySearch]);
 
-  const filtered = tiffinData.filter(p => {
-    if (activeFilter === 'All')         return true;
-    if (activeFilter === 'Near me')     return p.city.includes('Boston') || p.city.includes('Edison');
-    if (activeFilter === 'Vegetarian')  return p.veg;
-    if (activeFilter === 'Non-veg')     return !p.veg;
-    if (activeFilter === 'Jain')        return p.id === 'priya';
-    if (activeFilter === 'Trial box')   return p.trial;
-    if (activeFilter === 'Weekly plan') return true;
-    return true;
-  });
+  const selectCity = (city: CityOption | null) => {
+    setSelectedCity(city?.name || "All");
+    setVisibleCount(PAGE_SIZE);
+    setCityModalOpen(false);
+    setCitySearch("");
+  };
+  const sortedProviders = [...filtered].sort((a, b) =>
+    sortBy === "Rating"
+      ? b.rating - a.rating
+      : sortBy === "Orders"
+        ? b.orders - a.orders
+        : 0,
+  );
+  const visibleProviders = sortedProviders.slice(0, visibleCount);
+  const hasMore = visibleCount < sortedProviders.length;
 
-  const sortedProviders = [...filtered].sort((a, b) => {
-    if (sortBy === 'Rating') return b.rating - a.rating;
-    if (sortBy === 'Orders') return b.orders - a.orders;
-    return 0;
-  });
+  const selectFilter = (filter: string) => {
+    setActiveFilter(filter);
+    setVisibleCount(PAGE_SIZE);
+  };
+  const selectSort = (sort: string) => {
+    setSortBy(sort);
+    setVisibleCount(PAGE_SIZE);
+  };
+  useEffect(() => {
+    const target = sentinel.current;
+    if (!target || !hasMore) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting)
+          setVisibleCount((n) =>
+            Math.min(n + PAGE_SIZE, sortedProviders.length),
+          );
+      },
+      { rootMargin: "300px 0px" },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasMore, sortedProviders.length]);
+
+  const openProviderChat = (provider: TiffinProvider) => {
+    let user: { id?: string | number; isGuest?: boolean } | null = null;
+    try {
+      user = JSON.parse(localStorage.getItem("mcs_user") || "null");
+    } catch {}
+    if (!Number(user?.id) || user?.isGuest) {
+      router.push("/login");
+      return;
+    }
+    router.push(
+      "/chat?user=" +
+        encodeURIComponent(provider.name) +
+        "&source=tiffin&tiffinProviderId=" +
+        encodeURIComponent(provider.id),
+    );
+  };
+
+  const openProviderRegistration = () => {
+    try {
+      const user = JSON.parse(localStorage.getItem("mcs_user") || "null");
+      if (!Number(user?.id) || user?.isGuest) {
+        router.push("/login");
+        return;
+      }
+    } catch {
+      router.push("/login");
+      return;
+    }
+
+    setEditingProvider(null);
+    setProviderOpen(true);
+  };
+
+  const deleteProvider = async (provider: TiffinProvider) => {
+    if (
+      !window.confirm(
+        "Delete " +
+          provider.name +
+          "'s tiffin provider profile? This cannot be undone.",
+      )
+    )
+      return;
+
+    setDeletingProviderId(provider.id);
+    try {
+      const response = await fetch(
+        "/api/v1/models/MCS_TiffinProvider/" + provider.id,
+        { method: "DELETE" },
+      );
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          result.error || "Could not delete tiffin provider profile",
+        );
+      }
+
+      setTiffinData((current) =>
+        current.filter((item) => item.id !== provider.id),
+      );
+      localStorage.removeItem("MCS_TiffinProvider_ID");
+      try {
+        const user = JSON.parse(localStorage.getItem("mcs_user") || "{}");
+        const linkedProfileIds = { ...(user.linkedProfileIds || {}) };
+        delete linkedProfileIds.MCS_TiffinProvider_ID;
+        localStorage.setItem(
+          "mcs_user",
+          JSON.stringify({ ...user, linkedProfileIds }),
+        );
+        window.dispatchEvent(new Event("mcs_profile_change"));
+      } catch {}
+      toast.add("Tiffin provider profile deleted successfully.", "success");
+    } catch (error) {
+      toast.add(
+        error instanceof Error
+          ? error.message
+          : "Could not delete tiffin provider profile",
+        "error",
+      );
+    } finally {
+      setDeletingProviderId("");
+    }
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+    <div className={styles.page}>
       <PageHeader
         title="Tiffin Services"
         marathi="डबा"
-        subtitle={`${loading ? '...' : tiffinData.length} home cooks · fresh daily · delivered across 6 cities worldwide`}
-        actions={<>
-          <Btn kind="ghost" size="md" iconL="filter" onClick={() => setFilterOpen(true)}>Filters</Btn>
-          <Btn kind="dark"  size="md" iconL="plus" onClick={() => setProviderOpen(true)}>Become a provider</Btn>
-        </>}
+        subtitle={`${loading ? "..." : tiffinData.length} home cooks · fresh daily · delivered across 6 cities worldwide`}
+        actions={
+          <>
+            <Btn
+              kind="dark"
+              size="md"
+              iconL="plus"
+              onClick={openProviderRegistration}
+            >
+              Become a provider
+            </Btn>
+          </>
+        }
       />
 
-      {/* Hero banner */}
-      <div className="mob-stack" style={{
-        background: 'linear-gradient(115deg, #5C1F12 0%, #A8321F 55%, #E26A1F 100%)',
-        borderRadius: 20, padding: '30px 36px', color: '#fff', position: 'relative', overflow: 'hidden',
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32, alignItems: 'center',
-      }}>
-        <svg style={{ position: 'absolute', top: -30, right: -30, opacity: 0.1 }} width="220" height="220" viewBox="0 0 220 220" aria-hidden="true">
-          <g fill="none" stroke="#fff" strokeWidth="1"><circle cx="110" cy="110" r="90"/><circle cx="110" cy="110" r="66"/><circle cx="110" cy="110" r="42"/></g>
+      <div className={`${styles.hero} mob-stack`}>
+        <svg
+          className={styles.rings}
+          width="220"
+          height="220"
+          viewBox="0 0 220 220"
+          aria-hidden="true"
+        >
+          <g fill="none" stroke="#fff" strokeWidth="1">
+            <circle cx="110" cy="110" r="90" />
+            <circle cx="110" cy="110" r="66" />
+            <circle cx="110" cy="110" r="42" />
+          </g>
         </svg>
-        <div style={{ position: 'relative' }}>
-          <Tag color="#FFD89C" bg="rgba(255,216,156,0.15)">🍱 Ghar ka khana · घरचं जेवण</Tag>
-          <h2 style={{ margin: '12px 0 8px', fontFamily: F.display, fontSize: 30, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.1 }}>
-            Real Maharashtrian cooking.<br/>Delivered to your door.
+        <div className={styles.heroContent}>
+          <Tag color="#FFD89C" bg="rgba(255,216,156,0.15)">
+            🍱 Ghar ka khana · घरचं जेवण
+          </Tag>
+          <h2 className={styles.heroTitle}>
+            Real Maharashtrian cooking.
+            <br />
+            Delivered to your door.
           </h2>
-          <p style={{ margin: '0 0 20px', fontSize: 14, color: 'rgba(255,255,255,0.8)', fontWeight: 500, lineHeight: 1.55 }}>
-            Community cooks making fresh, daily tiffin — the food you grew up on, wherever you are in the world.
+          <p className={styles.heroText}>
+            Community cooks making fresh, daily tiffin — the food you grew up
+            on, wherever you are in the world.
           </p>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <Btn kind="primary" size="md" onClick={() => setActiveFilter('Near me')}>Find tiffin near me</Btn>
-            <Btn kind="ghost" size="md" style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }} onClick={() => setActiveFilter('Trial box')}>Try a trial box</Btn>
-          </div>
         </div>
-        <div className="mob-stack" style={{ position: 'relative', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          {[['Fresh daily','Home-cooked every morning'],['No preservatives','Authentic recipes'],['Doorstep delivery','In your neighbourhood'],['Trial box','Try before subscribing']].map(([t, s], i) => (
-            <div key={i} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: '14px 14px', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>{t}</div>
-              <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.6)', fontWeight: 500, marginTop: 3, lineHeight: 1.3 }}>{s}</div>
+      </div>
+
+      {cityModalOpen && (
+        <div
+          className={styles.cityModalBackdrop}
+          role="presentation"
+          onMouseDown={() => setCityModalOpen(false)}
+        >
+          <section
+            className={styles.cityModal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tiffin-city-filter-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header>
+              <div>
+                <h2 id="tiffin-city-filter-title">Select city</h2>
+                <p>
+                  {location.country === "All"
+                    ? "Showing cities from all countries"
+                    : `Cities in ${location.country}`}
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close city filter"
+                onClick={() => setCityModalOpen(false)}
+              >
+                ×
+              </button>
+            </header>
+            <label className={styles.citySearch}>
+              <Icon name="search" size={18} />
+              <input
+                autoFocus
+                value={citySearch}
+                onChange={(event) => setCitySearch(event.target.value)}
+                placeholder="Search cities..."
+                aria-label="Search cities"
+              />
+            </label>
+            <div className={styles.cityList}>
+              <button
+                type="button"
+                className={selectedCity === "All" ? styles.selectedCity : ""}
+                onClick={() => selectCity(null)}
+              >
+                <span>All cities</span>
+                <small>
+                  {location.country === "All"
+                    ? "Every country"
+                    : location.country}
+                </small>
+              </button>
+              {citiesLoading && (
+                <div className={styles.cityStatus}>Loading cities…</div>
+              )}
+              {!citiesLoading &&
+                filteredCities.map((city) => (
+                  <button
+                    type="button"
+                    key={`${city.countryId || "all"}-${city.id}`}
+                    className={
+                      selectedCity === city.name ? styles.selectedCity : ""
+                    }
+                    onClick={() => selectCity(city)}
+                  >
+                    <span>{city.name}</span>
+                    {location.country === "All" && city.country && (
+                      <small>{city.country}</small>
+                    )}
+                  </button>
+                ))}
+              {!citiesLoading && !filteredCities.length && (
+                <div className={styles.cityStatus}>No cities found</div>
+              )}
             </div>
-          ))}
+          </section>
         </div>
+      )}
+      <div className={styles.searchRow}>
+        <label className={styles.providerSearch}>
+          <Icon name="search" size={19} />
+          <input
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setVisibleCount(PAGE_SIZE);
+            }}
+            placeholder="Search providers, dishes, cities..."
+            aria-label="Search tiffin providers"
+          />
+        </label>
+        <Btn
+          kind="ghost"
+          size="md"
+          iconL="filter"
+          className={styles.searchFilterButton}
+          onClick={() => {
+            setCitiesLoading(true);
+            setCityModalOpen(true);
+          }}
+        >
+          Filters
+        </Btn>
+      </div>
+      <div className={styles.filters}>
+        {filters.map((f) => (
+          <Pill
+            key={f}
+            active={activeFilter === f}
+            onClick={() => selectFilter(f)}
+          >
+            {f}
+          </Pill>
+        ))}
       </div>
 
-      {/* Filter pills */}
-      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
-        {filters.map(f => <Pill key={f} active={activeFilter === f} onClick={() => setActiveFilter(f)}>{f}</Pill>)}
-      </div>
-
-      {/* Provider grid */}
       <section>
         <SectionHead
           title="Tiffin providers"
-          subtitle={`${filtered.length} provider${filtered.length === 1 ? '' : 's'} · ${activeFilter}`}
+          subtitle={`${filtered.length} provider${filtered.length === 1 ? "" : "s"} · ${activeFilter}`}
           action={
             <select
               value={sortBy}
-              onChange={e => setSortBy(e.target.value)}
-              style={{
-                appearance: 'none', border: 'none', background: 'transparent',
-                fontSize: 13, fontWeight: 600, color: C.saffronDk, cursor: 'pointer', outline: 'none',
-                fontFamily: 'inherit', paddingRight: 4
-              }}
+              onChange={(e) => selectSort(e.target.value)}
+              className={styles.sort}
             >
               <option value="Nearest">Sort: Nearest</option>
               <option value="Rating">Sort: Rating</option>
@@ -122,124 +496,202 @@ export default function TiffinPage() {
           }
         />
         {loading ? (
-          <div style={{ padding: '40px 24px', textAlign: 'center', color: C.ink3, fontSize: 13 }}>
-            Loading tiffin providers...
-          </div>
+          <div className={styles.status}>Loading tiffin providers...</div>
         ) : filtered.length === 0 ? (
-          <Card pad={32} style={{ textAlign: 'center' }}>
-            <div style={{ fontFamily: F.display, fontSize: 18, fontWeight: 600, color: C.ink }}>No providers match this filter</div>
-            <p style={{ margin: '8px 0 16px', fontSize: 13, color: C.ink3 }}>Try a different filter or become a provider.</p>
-            <Btn kind="primary" size="md" iconL="plus" onClick={() => setProviderOpen(true)}>Become a provider</Btn>
+          <Card pad={32} className={styles.empty}>
+            <div className={styles.emptyTitle}>
+              No providers match this filter
+            </div>
+            <p className={styles.emptyText}>
+              Try a different filter or become a provider.
+            </p>
+            <Btn
+              kind="primary"
+              size="md"
+              iconL="plus"
+              onClick={openProviderRegistration}
+            >
+              Become a provider
+            </Btn>
           </Card>
         ) : (
-          <div className="mob-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
-            {sortedProviders.map((p, index) => {
-              
-              return (
-                <Card key={`${p.id}-${index}`} interactive style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                  {/* Header */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
-                    <div style={{ position: 'relative', flexShrink: 0 }}>
-                      <div style={{ width: 54, height: 54, borderRadius: 12, background: toneBg[p.tone], display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Icon name="tiffin" size={26} color={toneColor[p.tone]}/>
-                      </div>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{p.name}</div>
-                      <div style={{ fontSize: 12, color: C.ink3, fontWeight: 500, marginTop: 2 }}>{p.city} · {p.mandal}</div>
-                      <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Rating value={p.rating}/>
-                        <span style={{ fontSize: 11.5, color: C.ink3, fontWeight: 500 }}>{p.orders.toLocaleString()} orders</span>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
-                      <Tag color={p.veg ? C.green : C.brick} bg={p.veg ? C.greenLt : '#FAE0DA'}>
-                        {p.veg ? '🟢 Veg' : '🔴 Non-veg'}
-                      </Tag>
-                      {p.trial && <Tag color={C.saffronDk} bg={C.saffronLt}>Trial ✓</Tag>}
-                    </div>
-                  </div>
-
-                  {/* Specialty */}
-                  <div style={{ background: toneBg[p.tone], borderRadius: 10, padding: '10px 12px', marginBottom: 12 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: toneColor[p.tone], letterSpacing: '0.06em', textTransform: 'uppercase' }}>Specialty</div>
-                    <div style={{ fontSize: 13.5, fontWeight: 600, color: C.ink, marginTop: 2 }}>{p.specialty}</div>
-                  </div>
-
-                  {/* Menu highlights */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 12 }}>
-                    {p.menu.map(m => <Tag key={m} color={C.ink2} bg={C.bgDeep}>{m}</Tag>)}
-                  </div>
-
-                  {/* Delivery + days */}
-                  <div style={{ fontSize: 12, color: C.ink3, fontWeight: 500, marginBottom: 6, display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                    <Icon name="pin" size={13} color={C.ink3}/>
-                    <span>{p.delivery}</span>
-                  </div>
-                  <div style={{ fontSize: 12, color: C.ink3, fontWeight: 500, marginBottom: 4, display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <Icon name="cal" size={13} color={C.ink3}/> {p.days} · Since {p.since}
-                  </div>
-                  <div style={{ fontSize: 12, color: C.ink3, fontStyle: 'italic', marginBottom: 14, lineHeight: 1.4 }}>"{p.note}"</div>
-
-                  {/* Pricing + CTA */}
-                  <div style={{ paddingTop: 12, borderTop: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                        <span className="num" style={{ fontFamily: F.display, fontSize: 22, fontWeight: 700, color: C.saffronDk, letterSpacing: '-0.02em' }}>{p.perMeal}</span>
-                        <span style={{ fontSize: 12, color: C.ink3, fontWeight: 500 }}>/ meal</span>
-                      </div>
-                      <div style={{ fontSize: 11.5, color: C.ink3, fontWeight: 500, marginTop: 2 }}>{p.perMonth}/mo · {p.days}</div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <Btn
-                        kind="primary"
-                        size="sm"
-                        onClick={() => setSubTarget({ name: p.name, price: p.perMeal })}
+          <>
+            <div className={`${styles.grid} mob-stack`}>
+              {visibleProviders.map((p, index) => (
+                <Card
+                  key={`${p.id}-${index}`}
+                  interactive
+                  className={styles.card}
+                  onClick={() => router.push("/tiffin/" + p.id)}
+                >
+                  <div className={styles.cardHead}>
+                    <div className={styles.iconWrap}>
+                      <div
+                        className={`${styles.providerIcon} ${styles[`toneBg_${p.tone}`]}`}
                       >
-                        Subscribe
-                      </Btn>
-                      <Btn kind="outline" size="sm" onClick={() => { setContactTarget(p.name); setContactOpen(true); }}><Icon name="chat" size={14}/></Btn>
+                        <Icon name="tiffin" size={26} color="currentColor" />
+                      </div>
+                    </div>
+                    <div className={styles.identity}>
+                      <Link
+                        href={"/tiffin/" + p.id}
+                        className={styles.nameLink}
+                      >
+                        <div className={styles.name}>{p.name}</div>
+                      </Link>
+                      <div className={styles.location}>
+                        {p.city} · {p.mandal}
+                      </div>
+                      <div className={styles.rating}>
+                        <Rating value={p.rating} />
+                      </div>
+                    </div>
+                    <div className={styles.tags}>
+                      <Tag
+                        color={p.veg ? "#1F7A3A" : "#A8321F"}
+                        bg={p.veg ? "#E1F2E6" : "#FAE0DA"}
+                      >
+                        {p.veg ? "🟢 Veg" : "🔴 Non-veg"}
+                      </Tag>
+                      {p.trial && (
+                        <Tag color="#B84F12" bg="#FFE9D6">
+                          Trial ✓
+                        </Tag>
+                      )}
+                    </div>
+                  </div>
+                  <div
+                    className={`${styles.specialty} ${styles[`toneBg_${p.tone}`]}`}
+                  >
+                    <div
+                      className={`${styles.specialtyLabel} ${styles[`toneColor_${p.tone}`]}`}
+                    >
+                      Specialty
+                    </div>
+                    <div className={styles.specialtyText}>{p.specialty}</div>
+                  </div>
+                  <div className={styles.menu}>
+                    {p.menu.map((m) => (
+                      <Tag key={m} color="#3A342B" bg="#F2EBD8">
+                        {m}
+                      </Tag>
+                    ))}
+                  </div>
+
+                  <div className={styles.pricing}>
+                    <div>
+                      <div className={styles.priceLine}>
+                        <span className={`${styles.price} num`}>
+                          {p.perMeal}
+                        </span>
+                        <span className={styles.perMeal}>/ meal</span>
+                      </div>
+                      <div className={styles.month}>
+                        {p.perMonth}/mo · {p.serviceDays} days
+                      </div>
+                    </div>
+                    <div
+                      className={styles.actions}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {p.owned ? (
+                        <div className={styles.ownerActions}>
+                          <button
+                            type="button"
+                            className={styles.editProvider}
+                            onClick={() => {
+                              setEditingProvider(p);
+                              setProviderOpen(true);
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.deleteProvider}
+                            disabled={deletingProviderId === p.id}
+                            onClick={() => void deleteProvider(p)}
+                          >
+                            {deletingProviderId === p.id
+                              ? "Deleting..."
+                              : "Delete"}
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <Btn
+                            kind="outline"
+                            size="sm"
+                            onClick={() => openProviderChat(p)}
+                          >
+                            <Icon name="chat" size={14} />
+                          </Btn>
+                        </>
+                      )}
                     </div>
                   </div>
                 </Card>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+            {hasMore && (
+              <div
+                ref={sentinel}
+                className={styles.loader}
+                aria-label="Loading more tiffin providers"
+              >
+                Loading more providers...
+              </div>
+            )}
+          </>
         )}
       </section>
 
-      {/* Become a provider */}
-      <Card pad={28} className="mob-stack" style={{
-        background: 'linear-gradient(135deg, #FFF8EB 0%, #FFE9D6 60%, #FFD9A6 100%)',
-        border: `1px solid rgba(184,137,60,0.18)`,
-        display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'center',
-      }}>
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.saffronDk, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>Cook for your community</div>
-          <h3 style={{ margin: 0, fontFamily: F.display, fontSize: 22, fontWeight: 600, color: C.ink, letterSpacing: '-0.025em', lineHeight: 1.2 }}>
-            Turn your cooking into a community service.
-          </h3>
-          <p style={{ margin: '8px 0 0', fontSize: 13.5, color: C.ink2, fontWeight: 500, lineHeight: 1.5, maxWidth: 540 }}>
-            Register as a tiffin provider. Set your own menu, prices and delivery area. The platform handles discovery — you handle the food.
-          </p>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <Btn kind="dark" size="md" iconL="plus" onClick={() => setProviderOpen(true)}>Become a provider</Btn>
-          <Btn kind="ghost" size="md" onClick={() => setInfoOpen(true)}>How it works</Btn>
-        </div>
-      </Card>
-      <BecomeProviderModal isOpen={providerOpen} onClose={() => setProviderOpen(false)}/>
-      <TiffinSubscribeModal isOpen={!!subTarget} onClose={() => setSubTarget(null)} providerName={subTarget?.name || ''} basePrice={subTarget?.price || ''}/>
-      <ContactModal isOpen={contactOpen} onClose={() => setContactOpen(false)} title={`Message ${contactTarget}`} subtitle="Regarding tiffin services" />
+      <BecomeTiffinProviderModal
+        key={editingProvider ? "edit-" + editingProvider.id : "create"}
+        isOpen={providerOpen}
+        provider={editingProvider || undefined}
+        onClose={() => {
+          setProviderOpen(false);
+          setEditingProvider(null);
+        }}
+        onCreated={async () => {
+          const response = await fetch(
+            "/api/v1/models/MCS_TiffinProvider?top=100&skip=0",
+          );
+          if (!response.ok) return;
+          const data = await response.json();
+          setTiffinData(Array.isArray(data.records) ? data.records : []);
+          setEditingProvider(null);
+        }}
+      />
+      <TiffinSubscribeModal
+        isOpen={!!subTarget}
+        onClose={() => setSubTarget(null)}
+        providerName={subTarget?.name || ""}
+        basePrice={subTarget?.price || ""}
+      />
       <InfoModal
-        isOpen={infoOpen} onClose={() => setInfoOpen(false)}
+        isOpen={infoOpen}
+        onClose={() => setInfoOpen(false)}
         title="How it works"
         content={
-          <ul style={{ paddingLeft: 20, margin: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <li><b>Find a cook:</b> Browse authenticated community cooks in your area.</li>
-            <li><b>Try a trial box:</b> Many cooks offer a one-time trial box so you can taste the food.</li>
-            <li><b>Subscribe:</b> Set up a weekly or monthly plan directly with the provider.</li>
-            <li><b>Enjoy:</b> Get fresh, home-cooked Maharashtrian meals delivered.</li>
+          <ul className={styles.info}>
+            <li>
+              <b>Find a cook:</b> Browse authenticated community cooks in your
+              area.
+            </li>
+            <li>
+              <b>Try a trial box:</b> Many cooks offer a one-time trial box so
+              you can taste the food.
+            </li>
+            <li>
+              <b>Subscribe:</b> Set up a weekly or monthly plan directly with
+              the provider.
+            </li>
+            <li>
+              <b>Enjoy:</b> Get fresh, home-cooked Maharashtrian meals
+              delivered.
+            </li>
           </ul>
         }
       />
