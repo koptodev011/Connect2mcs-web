@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import Icon from "@/components/Icon";
-import { Card, ImgPh, Rating, Tag } from "@/components/primitives";
+import { ImgPh } from "@/components/primitives";
 import { Mandal } from "@/data/mandals";
+import heroImage from "../../../public/images/mandals/worldwide-hero.png";
 import styles from "./page.module.css";
 
 const PAGE_SIZE = 12;
@@ -18,14 +20,15 @@ export default function MandalsPage() {
 
   useEffect(() => {
     fetch("/api/data/mandals")
-      .then((res) => res.json())
+      .then((response) => response.json())
       .then((data) => setMandalsData(Array.isArray(data) ? data : []))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = useMemo(() => {
-    const query = searchQuery.toLowerCase();
+  const filteredMandals = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
     return mandalsData.filter(
       (mandal) =>
         !query ||
@@ -34,149 +37,122 @@ export default function MandalsPage() {
     );
   }, [mandalsData, searchQuery]);
 
-  const visibleMandals = filtered.slice(0, visibleCount);
-  const hasMore = visibleCount < filtered.length;
+  const visibleMandals = filteredMandals.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredMandals.length;
 
   useEffect(() => {
     const target = loadMoreRef.current;
     if (!target || !hasMore) return;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting)
+        if (entry.isIntersecting) {
           setVisibleCount((count) =>
-            Math.min(count + PAGE_SIZE, filtered.length),
+            Math.min(count + PAGE_SIZE, filteredMandals.length),
           );
+        }
       },
       { rootMargin: "300px 0px" },
     );
+
     observer.observe(target);
     return () => observer.disconnect();
-  }, [hasMore, filtered.length]);
+  }, [hasMore, filteredMandals.length]);
 
   return (
-    <div className={styles.page}>
-      {/* महाराष्ट्र मंडळे */}
-      <Card pad={14} className={styles.searchCard}>
-        <div className={styles.searchField}>
-          <Icon name="search" size={16} color="#6B6256" />
-          <input
-            className={styles.searchInput}
-            value={searchQuery}
-            onChange={(event) => {
-              setSearchQuery(event.target.value);
-              setVisibleCount(PAGE_SIZE);
-            }}
-            placeholder="Search mandals by name or city…"
-          />
+    <main className={styles.page}>
+      <section className={styles.hero}>
+        <Image
+          className={styles.heroImage}
+          src={heroImage}
+          alt="Marathi Mandals connected across the world"
+          priority
+          sizes="(max-width: 900px) 100vw, 1200px"
+        />
+        <div className={styles.heroShade} />
+        <div className={styles.heroCopy}>
+          <h1>Marathi Mandals Worldwide</h1>
+          <p>Stronger Together, Wherever We Are</p>
+          <span>महाराष्ट्र मंडळे</span>
         </div>
-      </Card>
-      <section>
+      </section>
+
+      <div className={styles.searchField}>
+        <Icon name="search" size={17} color="#6B6256" />
+        <input
+          className={styles.searchInput}
+          value={searchQuery}
+          onChange={(event) => {
+            setSearchQuery(event.target.value);
+            setVisibleCount(PAGE_SIZE);
+          }}
+          placeholder="Search mandals by name or city…"
+          aria-label="Search mandals by name or city"
+        />
+      </div>
+
+      <section aria-label="Marathi Mandals">
         <div className={styles.grid}>
           {loading ? (
             <div className={styles.status}>
               Loading mandals from iDempiere...
             </div>
-          ) : filtered.length === 0 ? (
+          ) : filteredMandals.length === 0 ? (
             <div className={styles.status}>
-              <div className={styles.emptyTitle}>No mandals found</div>
-              <p className={styles.emptyText}>
-                Try adjusting your search or filters.
-              </p>
+              <h2>No mandals found</h2>
+              <p>Try adjusting your search.</p>
             </div>
           ) : (
-            visibleMandals.map((m, index) => (
+            visibleMandals.map((mandal, index) => (
               <Link
-                className={styles.mandalLink}
-                key={`${m.code}-${index}`}
-                href={`/mandals/${m.code}`}
+                className={styles.mandalCard}
+                key={`${mandal.code}-${index}`}
+                href={`/mandals/${mandal.code}`}
               >
-                <Card pad={0} interactive className={styles.mandalCard}>
+                <div className={styles.logo}>
                   <ImgPh
                     kind="mandal"
-                    label={m.code}
-                    showLabel
-                    height={130}
-                    tone={m.tone}
-                    badge={m.hosting ? "Hosting" : null}
-                    src={m.image}
+                    label={mandal.code}
+                    height={76}
+                    tone={mandal.tone}
+                    src={mandal.image}
                   />
-                  <div className={styles.cardBody}>
-                    <div className={styles.cardHeading}>
-                      <div className={styles.titleBlock}>
-                        <div className={styles.titleRow}>
-                          <div className={styles.mandalName}>{m.name}</div>
-                          {m.home && (
-                            <Tag
-                              color="#1F4DA8"
-                              bg="#DCE5F4"
-                              className={styles.tag}
-                            >
-                              Home
-                            </Tag>
-                          )}
-                          {m.nearMe && (
-                            <Tag
-                              color="#1F7A3A"
-                              bg="#E1F2E6"
-                              className={styles.tag}
-                            >
-                              Near You
-                            </Tag>
-                          )}
-                        </div>
-                        <div className={styles.location}>
-                          {m.city}, {m.region ? `${m.region}, ` : ""}
-                          {m.country} · Est. {m.est}
-                        </div>
-                      </div>
-                      {m.rating > 0 && <Rating value={m.rating} />}
-                    </div>
-                    {m.about ? (
-                      <div className={styles.about}>{m.about}</div>
-                    ) : (
-                      <div className={styles.aboutFallback}>
-                        A community organization fostering Marathi culture in{" "}
-                        {m.city}.
-                      </div>
-                    )}
-                    <div className={styles.metaRow}>
-                      <div className={styles.metrics}>
-                        {m.members > 0 && (
-                          <span className={styles.metric}>
-                            <Icon name="people" size={14} color="#6B6256" />{" "}
-                            {m.members.toLocaleString()}
-                          </span>
-                        )}
-                        {m.events > 0 && (
-                          <span className={styles.metric}>
-                            <Icon name="cal" size={14} color="#6B6256" />{" "}
-                            {m.events} events
-                          </span>
-                        )}
-                        {m.members === 0 && m.events === 0 && (
-                          <span className={styles.detailsLink}>
-                            View details &rarr;
-                          </span>
-                        )}
-                      </div>
-                      {m.dist && m.dist !== "N/A" && (
-                        <span className={styles.distance}>{m.dist}</span>
-                      )}
-                    </div>
-                  </div>
-                </Card>
+                </div>
+
+                <div className={styles.identity}>
+                  <h2>{mandal.name}</h2>
+                  <p>
+                    {mandal.city}
+                    {mandal.region ? `, ${mandal.region}` : ""}
+                    {mandal.country ? `, ${mandal.country}` : ""}
+                  </p>
+                </div>
+
+                <div className={styles.stats}>
+                  <span>
+                    <Icon name="cal" size={17} color="#3A342B" />
+                    {mandal.events} Events
+                  </span>
+                  <span>
+                    <Icon name="people" size={17} color="#3A342B" />
+                    {mandal.members.toLocaleString()} Members
+                  </span>
+                </div>
+
+                <Icon name="chevR" size={20} color="#6B6256" />
               </Link>
             ))
           )}
-          {hasMore && (
-            <div
-              ref={loadMoreRef}
-              className={styles.loadMoreSentinel}
-              aria-hidden="true"
-            />
-          )}
         </div>
+
+        {hasMore && (
+          <div
+            ref={loadMoreRef}
+            className={styles.loadMoreSentinel}
+            aria-hidden="true"
+          />
+        )}
       </section>
-    </div>
+    </main>
   );
 }

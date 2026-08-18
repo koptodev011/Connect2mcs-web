@@ -1,150 +1,240 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 20px;
+  width: 100%;
 }
-.searchCard {
+
+.hero {
+  position: relative;
+  min-height: 230px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #0c2c61;
+  box-shadow: 0 10px 30px rgb(10 33 71 / 12%);
+}
+
+.heroImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 58%;
+}
+
+.heroShade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgb(6 29 66 / 88%) 0%,
+    rgb(6 29 66 / 58%) 33%,
+    transparent 67%
+  );
+}
+
+.heroCopy {
+  position: relative;
+  z-index: 1;
   display: flex;
-  align-items: center;
-  gap: 14px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 230px;
+  max-width: 570px;
+  padding: 38px 48px;
+  color: #fff;
 }
+
+.heroCopy h1 {
+  margin: 0;
+  font-family: var(--font-display), "Space Grotesk", sans-serif;
+  font-size: clamp(28px, 3.1vw, 43px);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+.heroCopy p {
+  margin: 12px 0 0;
+  font-size: clamp(14px, 1.35vw, 18px);
+  font-weight: 600;
+}
+
+.heroCopy span {
+  margin-top: 10px;
+  color: #ffb14a;
+  font-family: var(--font-deva), "Tiro Devanagari Marathi", serif;
+  font-size: 18px;
+}
+
 .searchField {
   display: flex;
-  flex: 1;
   align-items: center;
   gap: 10px;
-  padding: 8px 14px;
-  background: #f2ebd8;
-  border-radius: 10px;
+  padding: 11px 16px;
+  border: 1px solid rgb(15 14 12 / 9%);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 4px 18px rgb(15 14 12 / 4%);
 }
+
 .searchInput {
   flex: 1;
   min-width: 0;
   border: 0;
   outline: 0;
   background: transparent;
-  font: 500 13.5px / normal inherit;
+  font: 500 13.5px/1.4 inherit;
 }
+
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
 }
-.status {
-  grid-column: 1/-1;
-  padding: 40px 24px;
-  color: #6b6256;
-  font-size: 13px;
-  text-align: center;
-}
-.emptyTitle {
-  color: #0f0e0c;
-  font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif;
-  font-size: 16px;
-  font-weight: 600;
-}
-.emptyText {
-  margin: 6px 0 0;
-  color: #6b6256;
-  font-size: 13px;
-}
-.mandalLink {
-  display: flex;
-  text-decoration: none;
-}
+
 .mandalCard {
-  position: relative;
-  flex: 1;
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) minmax(125px, auto) 20px;
+  align-items: center;
+  gap: 18px;
+  min-height: 110px;
+  padding: 16px 18px;
+  border: 1px solid rgb(15 14 12 / 8%);
+  border-radius: 16px;
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+  box-shadow: 0 5px 18px rgb(15 14 12 / 5%);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.mandalCard:hover {
+  transform: translateY(-2px);
+  border-color: rgb(226 106 31 / 35%);
+  box-shadow: 0 10px 25px rgb(15 14 12 / 9%);
+}
+
+.logo {
+  width: 76px;
   overflow: hidden;
+  border: 1px solid rgb(15 14 12 / 8%);
+  border-radius: 14px;
+  background: #fff;
 }
-.cardBody {
-  padding: 14px 16px;
-}
-.cardHeading,
-.titleRow,
-.metaRow,
-.metrics,
-.metric {
-  display: flex;
-}
-.cardHeading {
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-.titleBlock {
+
+.identity {
   min-width: 0;
 }
-.titleRow {
-  align-items: center;
-  gap: 6px;
-}
-.mandalName {
+
+.identity h2 {
   overflow: hidden;
-  color: #0f0e0c;
-  font-size: 14.5px;
+  margin: 0;
+  color: #15130f;
+  font-size: 14px;
   font-weight: 700;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
+  line-height: 1.4;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
-.tag {
-  flex-shrink: 0;
-  padding: 2px 4px;
-  font-size: 9px;
-}
-.location {
+
+.identity p {
   overflow: hidden;
-  margin-top: 4px;
+  margin: 7px 0 0;
   color: #6b6256;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.about,
-.aboutFallback {
-  margin-top: 10px;
-  font-size: 13px;
-  line-height: 1.4;
-}
-.about {
-  display: -webkit-box;
-  overflow: hidden;
-  color: #3a342b;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-.aboutFallback {
-  color: #6b6256;
-  font-style: italic;
-}
-.metaRow {
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid rgb(15 14 12 / 8%);
-  color: #6b6256;
+
+.stats {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 125px;
+  color: #4d463c;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
 }
-.metrics {
-  gap: 12px;
-}
-.metric {
+
+.stats span {
+  display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+  white-space: nowrap;
 }
-.detailsLink {
-  color: #1f4da8;
+
+.status {
+  grid-column: 1 / -1;
+  padding: 56px 24px;
+  color: #6b6256;
+  font-size: 13px;
+  text-align: center;
 }
-.distance {
-  color: #b84f12;
-  font-weight: 700;
+
+.status h2 {
+  margin: 0;
+  color: #0f0e0c;
+  font-size: 17px;
 }
+
+.status p {
+  margin: 7px 0 0;
+}
+
 .loadMoreSentinel {
-  grid-column: 1/-1;
   height: 1px;
+}
+
+@media (max-width: 1080px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero,
+  .heroCopy {
+    min-height: 205px;
+  }
+
+  .heroCopy {
+    padding: 28px 24px;
+  }
+
+  .heroShade {
+    background: linear-gradient(90deg, rgb(6 29 66 / 88%), rgb(6 29 66 / 32%));
+  }
+
+  .mandalCard {
+    grid-template-columns: 64px minmax(0, 1fr) 18px;
+    gap: 13px;
+    padding: 14px;
+  }
+
+  .logo {
+    width: 64px;
+    grid-row: 1 / 3;
+  }
+
+  .logo > div {
+    height: 64px !important;
+  }
+
+  .stats {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .mandalCard > svg {
+    grid-column: 3;
+    grid-row: 1;
+  }
 }
