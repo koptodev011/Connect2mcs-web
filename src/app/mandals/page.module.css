@@ -1,0 +1,150 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.searchCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.searchField {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: #f2ebd8;
+  border-radius: 10px;
+}
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: 500 13.5px / normal inherit;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.status {
+  grid-column: 1/-1;
+  padding: 40px 24px;
+  color: #6b6256;
+  font-size: 13px;
+  text-align: center;
+}
+.emptyTitle {
+  color: #0f0e0c;
+  font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+}
+.emptyText {
+  margin: 6px 0 0;
+  color: #6b6256;
+  font-size: 13px;
+}
+.mandalLink {
+  display: flex;
+  text-decoration: none;
+}
+.mandalCard {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+}
+.cardBody {
+  padding: 14px 16px;
+}
+.cardHeading,
+.titleRow,
+.metaRow,
+.metrics,
+.metric {
+  display: flex;
+}
+.cardHeading {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.titleBlock {
+  min-width: 0;
+}
+.titleRow {
+  align-items: center;
+  gap: 6px;
+}
+.mandalName {
+  overflow: hidden;
+  color: #0f0e0c;
+  font-size: 14.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tag {
+  flex-shrink: 0;
+  padding: 2px 4px;
+  font-size: 9px;
+}
+.location {
+  overflow: hidden;
+  margin-top: 4px;
+  color: #6b6256;
+  font-size: 12px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.about,
+.aboutFallback {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.about {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #3a342b;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.aboutFallback {
+  color: #6b6256;
+  font-style: italic;
+}
+.metaRow {
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgb(15 14 12 / 8%);
+  color: #6b6256;
+  font-size: 12px;
+  font-weight: 600;
+}
+.metrics {
+  gap: 12px;
+}
+.metric {
+  align-items: center;
+  gap: 5px;
+}
+.detailsLink {
+  color: #1f4da8;
+}
+.distance {
+  color: #b84f12;
+  font-weight: 700;
+}
+.loadMoreSentinel {
+  grid-column: 1/-1;
+  height: 1px;
+}
