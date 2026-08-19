@@ -1,24 +1,42 @@
-'use client';
+"use client";
 
-import { use, useEffect, useState } from 'react';
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { C, F } from '@/lib/tokens';
-import Icon from '@/components/Icon';
-import { Btn, Card, Rating, Tag } from '@/components/primitives';
-import { Business } from '@/data/businesses';
-import { toneBg, toneColor } from '@/lib/tones';
+import { use, useEffect, useState } from "react";
+import Link from "next/link";
+import { notFound, useRouter } from "next/navigation";
+import { C } from "@/lib/tokens";
+import Icon from "@/components/Icon";
+import {
+  Btn,
+  Card,
+  Rating,
+  Tag,
+  useGlobalToast,
+} from "@/components/primitives";
+import { Business } from "@/data/businesses";
+import { ListBusinessModal } from "@/components/FormModals";
+import { toneBg, toneColor } from "@/lib/tones";
+import styles from "./page.module.css";
 
-export default function BusinessDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function BusinessDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
+  const router = useRouter();
+  const toast = useGlobalToast();
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editOpen, setEditOpen] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    fetch('/api/data/businesses')
-      .then(res => res.json())
+    fetch("/api/data/businesses")
+      .then((res) => res.json())
       .then((data: Business[]) => {
-        const found = data.find(b => b.id === id);
+        const found = data.find((b) => b.id === id);
         if (found) setBusiness(found);
         setLoading(false);
       })
@@ -26,76 +44,163 @@ export default function BusinessDetailPage({ params }: { params: Promise<{ id: s
         console.error(err);
         setLoading(false);
       });
-  }, [id]);
+  }, [id, reloadKey]);
 
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      try {
+        const user = JSON.parse(localStorage.getItem("mcs_user") || "{}");
+        setCurrentUserId(String(user.id || ""));
+      } catch {
+        setCurrentUserId("");
+      }
+    });
+  }, []);
+
+  async function deleteBusiness() {
+    if (!business || deleting) return;
+    if (!window.confirm(`Delete "${business.name}"? This cannot be undone.`))
+      return;
+
+    setDeleting(true);
+    try {
+      const response = await fetch(
+        `/api/v1/models/MCS_Businesses/${encodeURIComponent(business.id)}`,
+        { method: "DELETE" },
+      );
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok)
+        throw new Error(result.error || "Could not delete business");
+
+      toast.add("Business deleted successfully.", "success");
+      router.push("/businesses");
+      router.refresh();
+    } catch (error) {
+      toast.add(
+        error instanceof Error ? error.message : "Could not delete business",
+        "error",
+      );
+      setDeleting(false);
+    }
+  }
   if (loading) {
-    return <div style={{ padding: 40, color: C.ink3, fontSize: 14 }}>Loading business details...</div>;
+    return <div className={styles.loading}>Loading business details...</div>;
   }
 
   if (!business) return notFound();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-      <Link href="/businesses" style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.ink3, fontSize: 13, fontWeight: 600, textDecoration: 'none', width: 'fit-content' }}>
-        <Icon name="chevL" size={14} color={C.ink3} /> Back to Directory
-      </Link>
-      
-      <Card pad={0} style={{ overflow: 'hidden' }}>
-        <div style={{ padding: '40px 36px', background: toneBg[business.tone], borderBottom: `1px solid ${C.line}` }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 24 }}>
-            <div style={{
-              width: 80, height: 80, borderRadius: 18, flexShrink: 0,
-              background: '#fff', color: toneColor[business.tone],
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 36, fontWeight: 700, fontFamily: F.display,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
-            }}>
+    <div className={styles.page}>
+      <div className={styles.topBar}>
+        <Link href="/businesses" className={styles.backLink}>
+          <Icon name="chevL" size={14} color={C.ink3} /> Back to Directory
+        </Link>
+        {currentUserId && business.ownerId === currentUserId && (
+          <div className={styles.ownerActions}>
+            <Btn kind="outline" size="md" onClick={() => setEditOpen(true)}>
+              Edit Business
+            </Btn>
+            <Btn
+              kind="ghost"
+              size="md"
+              onClick={deleteBusiness}
+              disabled={deleting}
+            >
+              {deleting ? "Deleting…" : "Delete Business"}
+            </Btn>
+          </div>
+        )}
+      </div>
+
+      <Card pad={0} className={styles.card}>
+        <div className={styles.hero} data-tone={business.tone}>
+          <div className={styles.heroInner}>
+            <div className={styles.businessInitial} data-tone={business.tone}>
               {business.name[0]}
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <h1 style={{ margin: 0, fontFamily: F.display, fontSize: 32, fontWeight: 700, color: C.ink, letterSpacing: '-0.02em', lineHeight: 1.2 }}>{business.name}</h1>
-                {business.verified && <Icon name="verify" size={24} color={C.green} />}
+            <div className={styles.businessDetails}>
+              <div className={styles.titleRow}>
+                <h1 className={styles.title}>{business.name}</h1>
+                {business.verified && (
+                  <Icon name="verify" size={24} color={C.green} />
+                )}
               </div>
-              <div style={{ fontSize: 16, color: C.ink2, fontWeight: 500, marginTop: 4, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                {business.owner} · <Rating value={business.rating} count={business.reviews} size="lg" />
-                {business.phone && <span style={{ color: C.ink3 }}>· {business.phone}</span>}
+              <div className={styles.ownerRow}>
+                {business.owner} ·{" "}
+                <Rating
+                  value={business.rating}
+                  count={business.reviews}
+                  size="lg"
+                />
               </div>
             </div>
           </div>
         </div>
 
-        <div style={{ padding: '32px 36px' }}>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
-            <Tag color={toneColor[business.tone]} bg={toneBg[business.tone]}>{business.cat}</Tag>
-            <Tag color={C.ink2} bg={C.bgDeep}><Icon name="pin" size={13} color={C.ink3}/> {business.city}</Tag>
-            {business.mandal && business.mandal !== '-' && <Tag color={C.ink2} bg={C.bgDeep}><Icon name="star" size={13} color={C.ink3}/> {business.mandal}</Tag>}
-            <Tag color={C.ink2} bg={C.bgDeep}>{business.years}y experience</Tag>
+        <div className={styles.content}>
+          <div className={styles.tags}>
+            <Tag color={toneColor[business.tone]} bg={toneBg[business.tone]}>
+              {business.cat}
+            </Tag>
+            <Tag color={C.ink2} bg={C.bgDeep}>
+              <Icon name="pin" size={13} color={C.ink3} /> {business.city} ,{" "}
+              {business.country}
+            </Tag>
+            {business.mandal && business.mandal !== "-" && (
+              <Tag color={C.ink2} bg={C.bgDeep}>
+                <Icon name="star" size={13} color={C.ink3} /> {business.mandal}
+              </Tag>
+            )}
           </div>
 
-          <h3 style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 700, color: C.ink3, letterSpacing: '0.08em', textTransform: 'uppercase' }}>About</h3>
-          <p style={{ margin: '0 0 24px', fontSize: 15, color: C.ink2, fontWeight: 500, lineHeight: 1.6, maxWidth: 640 }}>
-            {business.desc} We are proud to serve the local community and have been a part of the {business.mandal} network for many years.
-          </p>
+          <h3 className={styles.sectionTitle}>About</h3>
+          <p className={styles.about}>{business.desc}</p>
 
-          <h3 style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 700, color: C.ink3, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Services</h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 32 }}>
-            {business.services.map(s => <Tag key={s} color={C.ink2} bg={C.bgDeep}>{s}</Tag>)}
+          <h3 className={styles.sectionTitle}>Services</h3>
+          <div className={styles.services}>
+            {business.services.map((s) => (
+              <Tag key={s} color={C.ink2} bg={C.bgDeep}>
+                {s}
+              </Tag>
+            ))}
           </div>
 
-          <div style={{ display: 'flex', gap: 12, paddingTop: 32, borderTop: `1px solid ${C.line}` }}>
+          <div className={styles.actions}>
             {business.phone ? (
-              <a href={`tel:${business.phone}`} style={{ textDecoration: 'none' }}>
-                <Btn kind="primary" size="lg" iconL="chat">Call {business.phone}</Btn>
+              <a href={`tel:${business.phone}`} className={styles.phoneLink}>
+                <Btn kind="primary" size="lg" iconL="chat">
+                  Call {business.phone}
+                </Btn>
               </a>
             ) : (
-              <Btn kind="primary" size="lg" iconL="chat">Contact Business</Btn>
+              <Btn kind="primary" size="lg" iconL="chat">
+                Contact Business
+              </Btn>
             )}
-            <Btn kind="outline" size="lg"><Icon name="globe" size={18} color={C.ink}/> Website</Btn>
-            <Btn kind="outline" size="lg"><Icon name="share" size={18} color={C.ink}/></Btn>
+            {business.website && (
+              <a
+                href={business.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.websiteLink}
+              >
+                <Btn kind="outline" size="lg">
+                  <Icon name="globe" size={18} color={C.ink} /> Website
+                </Btn>
+              </a>
+            )}
+            <Btn kind="outline" size="lg">
+              <Icon name="share" size={18} color={C.ink} />
+            </Btn>
           </div>
         </div>
       </Card>
+      <ListBusinessModal
+        isOpen={editOpen}
+        business={business}
+        onClose={() => setEditOpen(false)}
+        onSaved={() => setReloadKey((key) => key + 1)}
+      />
     </div>
   );
 }

@@ -123,7 +123,7 @@ export async function GET(
   const sourceSkipRecords = selectedCountry === "All" ? skipRecords : 0;
 
   try {
-    let data = [];
+    let data: any = [];
 
     switch (model) {
       case "countries": {
@@ -724,19 +724,32 @@ export async function GET(
         break;
 
       case "businesses":
-        const rawBusinesses = await fetchModel("C_BPartner");
-        // Only real businesses (flagged MCS_IsBusiness), not system/person partners.
-        // Returns [] until the backend enters business records — cleaner than junk.
+        const rawBusinesses = await fetchModel("MCS_Businesses");
         data = rawBusinesses
-          .filter((b: any) => b.MCS_IsBusiness === true)
+          .filter((record: any) => record.IsActive !== false)
           .map((record: any) => ({
-            id: record.id.toString(),
-            name: record.Name,
-            owner: record.Name2 || record.Name,
-            cat: record.C_BP_Group_ID?.identifier || "Services",
+            id: String(record.id),
+            name: record.Name || "",
+            owner:
+              record.AD_User_ID?.identifier ||
+              record.CreatedBy?.identifier ||
+              record.Name,
+            ownerId: String(
+              record.AD_User_ID?.id || record.CreatedBy?.id || "",
+            ),
+            cat: record.MCS_Business_Category_ID?.identifier || "Services",
+            categoryId: String(record.MCS_Business_Category_ID?.id || ""),
             city: record.C_City_ID?.identifier || "Online",
+            cityId: String(record.C_City_ID?.id || ""),
+            countryId: String(record.C_Country_ID?.id || ""),
             desc: record.Description || "",
-            services: record.MCS_Services ? record.MCS_Services.split(",") : [],
+            help: record.Help || "",
+            country: record.C_Country_ID?.identifier || "",
+            services: record.MCS_Services
+              ? record.MCS_Services.split(",")
+                  .map((service: string) => service.trim())
+                  .filter(Boolean)
+              : [],
             rating: record.Rating ? parseFloat(record.Rating) : 4.8,
             reviews: record.MCS_ReviewCount || 0,
             years: record.VH_YearsInBusiness || 1,
@@ -744,6 +757,7 @@ export async function GET(
             mandal: record.MCS_Mandals_ID?.identifier || "Global",
             verified: record.IsVerified === true,
             phone: record.Phone || "",
+            website: record.MCS_siteUrl || "",
           }));
         break;
 

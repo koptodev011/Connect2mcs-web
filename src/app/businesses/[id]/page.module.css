@@ -1,0 +1,209 @@
+.loading {
+  padding: 40px;
+  color: #6b6256;
+  font-size: 14px;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.backLink {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 8px;
+  color: #6b6256;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.card {
+  overflow: hidden;
+}
+
+.hero {
+  padding: 40px 36px;
+  border-bottom: 1px solid rgba(15, 14, 12, 0.08);
+}
+
+.hero[data-tone="saffron"] {
+  background: #ffe9d6;
+}
+.hero[data-tone="brick"] {
+  background: #fae0da;
+}
+.hero[data-tone="green"] {
+  background: #e1f2e6;
+}
+.hero[data-tone="blue"] {
+  background: #dce5f4;
+}
+.hero[data-tone="gold"] {
+  background: #f4e8cc;
+}
+.hero[data-tone="pink"] {
+  background: #f2c9d3;
+}
+.hero[data-tone="sand"] {
+  background: #ede3c8;
+}
+
+.heroInner {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.businessInitial {
+  display: flex;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  font-family:
+    var(--font-display),
+    "Space Grotesk",
+    "Poppins",
+    -apple-system,
+    system-ui,
+    sans-serif;
+  font-size: 36px;
+  font-weight: 700;
+}
+
+.businessInitial[data-tone="saffron"] {
+  color: #b84f12;
+}
+.businessInitial[data-tone="brick"] {
+  color: #a8321f;
+}
+.businessInitial[data-tone="green"] {
+  color: #1f7a3a;
+}
+.businessInitial[data-tone="blue"] {
+  color: #1f4da8;
+}
+.businessInitial[data-tone="gold"] {
+  color: #b8893c;
+}
+.businessInitial[data-tone="pink"] {
+  color: #a33b6e;
+}
+.businessInitial[data-tone="sand"] {
+  color: #8e7b3f;
+}
+
+.businessDetails {
+  flex: 1;
+}
+
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.title {
+  margin: 0;
+  color: #0f0e0c;
+  font-family:
+    var(--font-display),
+    "Space Grotesk",
+    "Poppins",
+    -apple-system,
+    system-ui,
+    sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.ownerRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  color: #3a342b;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.phone {
+  color: #6b6256;
+}
+
+.content {
+  padding: 32px 36px;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.sectionTitle {
+  margin: 0 0 12px;
+  color: #6b6256;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.about {
+  max-width: 640px;
+  margin: 0 0 24px;
+  color: #3a342b;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.services {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 32px;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  padding-top: 32px;
+  border-top: 1px solid rgba(15, 14, 12, 0.08);
+}
+
+.phoneLink {
+  text-decoration: none;
+}
+
+.topBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ownerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.websiteLink {
+  text-decoration: none;
+}

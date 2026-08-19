@@ -1,0 +1,258 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.statValue {
+  color: #0f0e0c;
+  font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+}
+.statLabel {
+  margin-top: 4px;
+  color: #6b6256;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.statSubtext {
+  margin-top: 2px;
+  color: #a39a8a;
+  font-size: 11px;
+  font-weight: 500;
+}
+.searchCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.searchField {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: #f2ebd8;
+}
+.searchInput {
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: 500 13.5px inherit;
+}
+.citySelect {
+  padding: 9px 12px;
+  border: 1px solid rgba(15, 14, 12, 0.14);
+  border-radius: 10px;
+  background: #fff;
+  font: 600 13px inherit;
+}
+.categories {
+  display: flex;
+  gap: 6px;
+  padding-bottom: 4px;
+  overflow-x: auto;
+}
+.sortSelect {
+  appearance: none;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #b84f12;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.status {
+  padding: 40px 24px;
+  color: #6b6256;
+  font-size: 13px;
+  text-align: center;
+}
+.emptyState {
+  text-align: center;
+}
+.emptyTitle {
+  color: #0f0e0c;
+  font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+}
+.emptyText {
+  margin: 8px 0 16px;
+  color: #6b6256;
+  font-size: 13px;
+}
+.businessGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.businessLink {
+  display: flex;
+  text-decoration: none;
+}
+.businessCard {
+  flex: 1;
+}
+.businessHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.businessInitial {
+  display: flex;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+}
+.businessInitial[data-tone="saffron"] {
+  background: #ffe9d6;
+  color: #b84f12;
+}
+.businessInitial[data-tone="brick"] {
+  background: #fae0da;
+  color: #a8321f;
+}
+.businessInitial[data-tone="green"] {
+  background: #e1f2e6;
+  color: #1f7a3a;
+}
+.businessInitial[data-tone="blue"] {
+  background: #dce5f4;
+  color: #1f4da8;
+}
+.businessInitial[data-tone="gold"] {
+  background: #f4e8cc;
+  color: #b8893c;
+}
+.businessInitial[data-tone="pink"] {
+  background: #f2c9d3;
+  color: #a33b6e;
+}
+.businessInitial[data-tone="sand"] {
+  background: #ede3c8;
+  color: #8e7b3f;
+}
+.businessDetails {
+  flex: 1;
+  min-width: 0;
+}
+.businessNameRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.businessName {
+  color: #0f0e0c;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.owner {
+  margin-top: 2px;
+  color: #6b6256;
+  font-size: 12px;
+  font-weight: 500;
+}
+.ratingRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+}
+.businessMeta {
+  color: #6b6256;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.description {
+  margin: 0 0 12px;
+  color: #3a342b;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.55;
+}
+.services {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+.businessFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid rgba(15, 14, 12, 0.08);
+}
+.mandal {
+  color: #a39a8a;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+}
+.cta {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 24px;
+  border: 1px solid rgba(184, 137, 60, 0.18);
+  background: linear-gradient(135deg, #fff8eb, #ffe9d6);
+}
+.ctaEyebrow {
+  margin-bottom: 8px;
+  color: #b84f12;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.ctaTitle {
+  margin: 0;
+  color: #0f0e0c;
+  font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+.ctaText {
+  margin: 8px 0 0;
+  color: #3a342b;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.ctaActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
