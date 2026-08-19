@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { C } from "@/lib/tokens";
 import Icon from "@/components/Icon";
 import Link from "next/link";
+import { useLocation } from "@/components/LocationContext";
 import {
   Btn,
   Card,
@@ -16,22 +17,23 @@ import {
   useGlobalToast,
 } from "@/components/primitives";
 import { FilterModal } from "@/components/FormModals";
-import { businessStats, Business } from "@/data/businesses";
+import { Business } from "@/data/businesses";
 import { toneBg, toneColor } from "@/lib/tones";
 import { ListBusinessModal } from "@/components/FormModals";
 import styles from "./page.module.css";
 
-const cats = [
-  "All",
-  "Legal",
-  "Medical",
-  "Real Estate",
-  "Finance",
-  "IT & Tech",
-  "Restaurant",
-  "Education",
-  "Travel",
-];
+type BusinessCategoryRecord = {
+  id: string | number;
+  Name?: string;
+  IsActive?: boolean;
+};
+
+type CityOption = {
+  id: string;
+  name: string;
+  country?: string;
+  countryId?: string;
+};
 
 export default function BusinessesPage() {
   const [businessesData, setBusinessesData] = useState<Business[]>([]);
@@ -42,6 +44,71 @@ export default function BusinessesPage() {
   const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
   const [currentUserId, setCurrentUserId] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const [categories, setCategories] = useState<string[]>([]);
+  const { location } = useLocation();
+  const [cities, setCities] = useState<CityOption[]>([]);
+  const [citiesLoading, setCitiesLoading] = useState(false);
+  const [citySearch, setCitySearch] = useState("");
+  const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
+  const [selectedCity, setSelectedCity] = useState("All");
+  const cityDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!cityDropdownOpen) return;
+    const controller = new AbortController();
+    setCitiesLoading(true);
+    const countryQuery =
+      location.country !== "All" && location.countryId
+        ? `?countryId=${encodeURIComponent(location.countryId)}`
+        : "";
+    fetch(`/api/v1/models/C_City${countryQuery}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((response) =>
+        response.ok
+          ? response.json()
+          : Promise.reject(new Error("Unable to load cities")),
+      )
+      .then((data) => {
+        setCities(Array.isArray(data.records) ? data.records : []);
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError")
+          console.error("Cities API error:", error);
+      })
+      .finally(() => setCitiesLoading(false));
+    return () => controller.abort();
+  }, [cityDropdownOpen, location.country, location.countryId]);
+
+  useEffect(() => {
+    if (!cityDropdownOpen) return;
+    const handlePointer = (event: MouseEvent) => {
+      if (
+        cityDropdownRef.current &&
+        !cityDropdownRef.current.contains(event.target as Node)
+      ) {
+        setCityDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handlePointer);
+    return () => document.removeEventListener("mousedown", handlePointer);
+  }, [cityDropdownOpen]);
+
+  const filteredCities = useMemo(() => {
+    const needle = citySearch.trim().toLowerCase();
+    return cities.filter(
+      (city) =>
+        !needle ||
+        `${city.name} ${city.country || ""}`.toLowerCase().includes(needle),
+    );
+  }, [cities, citySearch]);
+
+  const selectCity = (city: CityOption | null) => {
+    setSelectedCity(city?.name || "All");
+    setCityDropdownOpen(false);
+    setCitySearch("");
+  };
 
   useEffect(() => {
     fetch("/api/data/businesses")
@@ -64,6 +131,29 @@ export default function BusinessesPage() {
     });
   }, []);
 
+  useEffect(() => {
+    fetch("/api/v1/models/MCS_Business_Category", { cache: "no-store" })
+      .then((response) => {
+        if (!response.ok) throw new Error("Could not load business categories");
+        return response.json();
+      })
+      .then((data: { records?: BusinessCategoryRecord[] }) => {
+        const names = (Array.isArray(data.records) ? data.records : [])
+          .filter(
+            (category) =>
+              category.IsActive !== false && Boolean(category.Name?.trim()),
+          )
+          .map((category) => category.Name!.trim());
+        setCategories([...new Set(names)]);
+      })
+      .catch((error) => {
+        console.error("Business category loading failed:", error);
+        setCategories([]);
+      });
+  }, []);
+
+  const cats = ["All", ...categories];
+
   const [activeCat, setActiveCat] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("Rating");
@@ -77,6 +167,9 @@ export default function BusinessesPage() {
 
   const filtered = businessesData.filter((b) => {
     const matchCat = activeCat === "All" || b.cat === activeCat;
+    const matchCity =
+      selectedCity === "All" ||
+      b.city.toLowerCase().includes(selectedCity.toLowerCase());
     const matchQ =
       !searchQuery ||
       b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -84,7 +177,7 @@ export default function BusinessesPage() {
       b.services.some((s) =>
         s.toLowerCase().includes(searchQuery.toLowerCase()),
       );
-    return matchCat && matchQ;
+    return matchCat && matchCity && matchQ;
   });
 
   const sortedBusinesses = [...filtered].sort((a, b) => {
@@ -96,6 +189,37 @@ export default function BusinessesPage() {
     }
     return 0; // default
   });
+
+  const totalReviews = businessesData.reduce(
+    (total, business) => total + business.reviews,
+    0,
+  );
+  const averageRating = businessesData.length
+    ? businessesData.reduce((total, business) => total + business.rating, 0) /
+      businessesData.length
+    : 0;
+  const countryCount = new Set(
+    businessesData
+      .map((business) => business.countryId || business.country)
+      .filter(Boolean),
+  ).size;
+  const businessStats = [
+    {
+      v: loading ? "..." : String(businessesData.length),
+      l: "Registered businesses",
+      s: `across ${categories.length} categories`,
+    },
+    {
+      v: loading ? "..." : averageRating.toFixed(1),
+      l: "Average rating",
+      s: `from ${totalReviews.toLocaleString()} reviews`,
+    },
+    {
+      v: loading ? "..." : String(countryCount),
+      l: "Countries",
+      s: "global Marathi businesses",
+    },
+  ];
 
   async function deleteBusiness(event: React.MouseEvent, business: Business) {
     event.preventDefault();
@@ -163,23 +287,74 @@ export default function BusinessesPage() {
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Lawyer, cardiologist, caterer, Marathi school…"
+            placeholder="Search Businesses"
             className={styles.searchInput}
           />
         </div>
-        <select className={styles.citySelect}>
-          <option>All cities</option>
-          {[
-            "Boston, MA",
-            "Edison, NJ",
-            "Toronto",
-            "London, UK",
-            "Bengaluru",
-            "Sydney",
-          ].map((c) => (
-            <option key={c}>{c}</option>
-          ))}
-        </select>
+        <div className={styles.citySelectWrap} ref={cityDropdownRef}>
+          <button
+            type="button"
+            className={styles.citySelect}
+            onClick={() => {
+              setCitiesLoading(true);
+              setCityDropdownOpen((open) => !open);
+            }}
+          >
+            <Icon name="pin" size={14} color={C.ink3} />
+            <span>{selectedCity}</span>
+            <Icon name="chev" size={14} color={C.ink3} />
+          </button>
+          {cityDropdownOpen && (
+            <div className={styles.cityDropdown} role="listbox">
+              <label className={styles.citySearchBox}>
+                <Icon name="search" size={16} color={C.ink3} />
+                <input
+                  autoFocus
+                  value={citySearch}
+                  onChange={(event) => setCitySearch(event.target.value)}
+                  placeholder="Search cities..."
+                  aria-label="Search cities"
+                />
+              </label>
+              <div className={styles.cityOptions}>
+                <button
+                  type="button"
+                  className={selectedCity === "All" ? styles.cityActive : ""}
+                  onClick={() => selectCity(null)}
+                >
+                  <span>All cities</span>
+                  <small>
+                    {location.country === "All"
+                      ? "Every country"
+                      : location.country}
+                  </small>
+                </button>
+                {citiesLoading && (
+                  <div className={styles.cityStatus}>Loading cities…</div>
+                )}
+                {!citiesLoading &&
+                  filteredCities.map((city) => (
+                    <button
+                      type="button"
+                      key={`${city.countryId || "all"}-${city.id}`}
+                      className={
+                        selectedCity === city.name ? styles.cityActive : ""
+                      }
+                      onClick={() => selectCity(city)}
+                    >
+                      <span>{city.name}</span>
+                      {location.country === "All" && city.country && (
+                        <small>{city.country}</small>
+                      )}
+                    </button>
+                  ))}
+                {!citiesLoading && !filteredCities.length && (
+                  <div className={styles.cityStatus}>No cities found</div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
         <Btn kind="primary" size="md">
           Search
         </Btn>
@@ -264,13 +439,10 @@ export default function BusinessesPage() {
                         </div>
                         <div className={styles.owner}>{b.owner}</div>
                         <div className={styles.ratingRow}>
-                          <Rating value={b.rating} count={b.reviews} />
-                          <span className={styles.businessMeta}>
-                            {b.years}y exp
-                          </span>
+                        
                           {b.phone && (
                             <span className={styles.businessMeta}>
-                              · {b.phone}
+                               {b.phone}
                             </span>
                           )}
                         </div>
@@ -283,7 +455,8 @@ export default function BusinessesPage() {
                         {b.cat}
                       </Tag>
                       <Tag color={C.ink2} bg={C.bgDeep}>
-                        <Icon name="pin" size={11} color={C.ink3} /> {b.city}
+                        <Icon name="pin" size={11} color={C.ink3} /> {b.city},{" "}
+                        {b.country}
                       </Tag>
                       {b.mandal && b.mandal !== "-" && (
                         <Tag color={C.ink2} bg={C.bgDeep}>
@@ -332,7 +505,7 @@ export default function BusinessesPage() {
                             </Btn>
                           </>
                         )}
-                        <Btn
+                        {/* <Btn
                           kind="primary"
                           size="sm"
                           onClick={(e) => {
@@ -341,7 +514,7 @@ export default function BusinessesPage() {
                           }}
                         >
                           Contact
-                        </Btn>
+                        </Btn> */}
                         <Btn
                           kind="outline"
                           size="sm"

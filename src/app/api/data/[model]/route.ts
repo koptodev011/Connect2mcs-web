@@ -754,7 +754,7 @@ export async function GET(
             reviews: record.MCS_ReviewCount || 0,
             years: record.VH_YearsInBusiness || 1,
             tone: getTone(record.id),
-            mandal: record.MCS_Mandals_ID?.identifier || "Global",
+            mandal: record.MCS_Mandals_ID?.identifier || "",
             verified: record.IsVerified === true,
             phone: record.Phone || "",
             website: record.MCS_siteUrl || "",

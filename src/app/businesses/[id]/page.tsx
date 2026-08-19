@@ -126,12 +126,7 @@ export default function BusinessDetailPage({
                 )}
               </div>
               <div className={styles.ownerRow}>
-                {business.owner} ·{" "}
-                <Rating
-                  value={business.rating}
-                  count={business.reviews}
-                  size="lg"
-                />
+                {business.owner} 
               </div>
             </div>
           </div>
