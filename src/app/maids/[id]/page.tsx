@@ -40,6 +40,7 @@ function normalizeMaidProfile(data: RawMaidProfile, fallback: Helper): Helper {
     ...fallback,
     ...data,
     services: services || data.services || fallback.services,
+    tag: data.tag || fallback.tag || "",
     experience: Number.isFinite(experienceYears)
       ? `${experienceYears} yrs exp`
       : data.experience || fallback.experience,
@@ -49,7 +50,12 @@ function normalizeMaidProfile(data: RawMaidProfile, fallback: Helper): Helper {
       ? data.languages
       : fallback.languages,
     skills: Array.isArray(data.skills) ? data.skills : fallback.skills,
-    reviews: Array.isArray(data.reviews) ? data.reviews : fallback.reviews,
+    reviews: (Array.isArray(data.reviews) ? data.reviews : fallback.reviews).map(
+      (review) => ({
+        ...review,
+        date: "date" in review ? String(review.date || "") : "",
+      }),
+    ),
   };
 }
 
@@ -207,7 +213,7 @@ export default function MaidDetailsPage({
     try {
       user = JSON.parse(localStorage.getItem("mcs_user") || "null");
     } catch {}
-    if (!Number(user?.id) || user?.isGuest) {
+    if (!user || !Number(user.id) || user.isGuest) {
       router.push("/login");
       return;
     }

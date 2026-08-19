@@ -47,24 +47,24 @@ export default function MentorRequestsSection() {
   };
 
   const pendingCount = requests.filter(request => request.status === 'P').length;
-//   return <section>
-//     <SectionHead title="Mentorship requests" subtitle={loading ? 'Loading requests...' : `${pendingCount} pending requests`}/>
-//     {loading ? <Card><div className={styles.myMentorsEmpty}>Loading mentorship requests...</div></Card>
-//       : loadError ? <Card><div className={styles.myMentorsEmpty}>{loadError}</div></Card>
-//       : requests.length === 0 ? <Card><div className={styles.myMentorsEmpty}>No mentorship requests received yet.</div></Card>
-//       : <div className={styles.myMentorsGrid}>
-//         {requests.map(request => <Card key={request.id} className={styles.myMentorCard}>
-//           <Avatar name={request.name} size={44}/>
-//           <div className={styles.myMentorInfo}>
-//             <strong>{request.name}</strong>
-//             <span>{request.created ? new Date(request.created).toLocaleDateString() : 'Mentorship request'}</span>
-//             <small>{request.status === 'A' ? 'Accepted' : request.status === 'R' ? 'Rejected' : 'Pending'}</small>
-//           </div>
-//           {request.status === 'P' && <div style={{ display: 'flex', gap: 8 }}>
-//             <Btn kind="primary" size="sm" disabled={updatingId === request.id} onClick={() => void update(request.id, 'A')}>Accept</Btn>
-//             <Btn kind="ghost" size="sm" disabled={updatingId === request.id} onClick={() => void update(request.id, 'R')}>Reject</Btn>
-//           </div>}
-//         </Card>)}
-//       </div>}
-//   </section>;
+  return <section>
+    <SectionHead title="Mentorship requests" subtitle={loading ? 'Loading requests...' : `${pendingCount} pending requests`}/>
+    {loading ? <Card><div className={styles.myMentorsEmpty}>Loading mentorship requests...</div></Card>
+      : loadError ? <Card><div className={styles.myMentorsEmpty}>{loadError}</div></Card>
+      : requests.length === 0 ? <Card><div className={styles.myMentorsEmpty}>No mentorship requests received yet.</div></Card>
+      : <div className={styles.myMentorsGrid}>
+        {requests.map(request => <Card key={request.id} className={styles.myMentorCard}>
+          <Avatar name={request.name} size={44}/>
+          <div className={styles.myMentorInfo}>
+            <strong>{request.name}</strong>
+            <span>{request.created ? new Date(request.created).toLocaleDateString() : 'Mentorship request'}</span>
+            <small>{request.status === 'A' ? 'Accepted' : request.status === 'R' ? 'Rejected' : 'Pending'}</small>
+          </div>
+          {request.status === 'P' && <div style={{ display: 'flex', gap: 8 }}>
+            <Btn kind="primary" size="sm" disabled={updatingId === request.id} onClick={() => void update(request.id, 'A')}>Accept</Btn>
+            <Btn kind="ghost" size="sm" disabled={updatingId === request.id} onClick={() => void update(request.id, 'R')}>Reject</Btn>
+          </div>}
+        </Card>)}
+      </div>}
+  </section>;
 }

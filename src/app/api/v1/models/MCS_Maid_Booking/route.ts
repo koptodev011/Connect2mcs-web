@@ -22,7 +22,7 @@ type BookingRecord = {
   MCS_Review?: string;
 };
 
-function referenceText(value: string | Reference | undefined) {
+function referenceText(value: number | string | Reference | undefined) {
   return typeof value === "object" && value !== null
     ? String(value.identifier || value.id || "")
     : String(value || "");

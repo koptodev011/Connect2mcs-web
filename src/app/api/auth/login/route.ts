@@ -86,7 +86,7 @@ export async function POST(request: Request) {
                   console.warn(`Failed to look up ${model} for AD_User_ID ${userId}:`, profileLookupError);
                   return null;
                 }
-              }))).filter((entry): entry is readonly [string, string] => entry !== null)
+              }))).filter((entry): entry is NonNullable<typeof entry> => entry !== null)
             : [],
         );
         const loginTypeValue = erpUser?.MCS_LoginType;

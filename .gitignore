@@ -48,3 +48,9 @@ package-lock.json
 
 # public
 public/*
+
+# next.js
+.next/
+
+# zip files
+*.zip

@@ -24,7 +24,7 @@ export default function EventsPage() {
   const [activeCat, setActiveCat] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('Upcoming');
-  const [going] = useState<Set<string>>(new Set());
+  const [going, setGoing] = useState<Set<string>>(new Set());
   const [hostEventOpen, setHostEventOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0);
@@ -32,6 +32,14 @@ export default function EventsPage() {
   const eventListRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
+  const toggleRsvp = (eventId: string) => {
+    setGoing((current) => {
+      const next = new Set(current);
+      if (next.has(eventId)) next.delete(eventId);
+      else next.add(eventId);
+      return next;
+    });
+  };
   useEffect(() => {
     fetch('/api/data/events')
       .then(res => res.json())

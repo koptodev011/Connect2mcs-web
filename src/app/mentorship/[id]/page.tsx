@@ -13,7 +13,7 @@ type MentorDetail = {
   industry: string; category: string; years: number; verified: boolean; rate: number; currency: string;
   languages: string[]; user: string; created: string; updated: string; rating: number; reviewCount: number; connectionCount: number;
 };
-type Webinar = EditableWebinar & { duration: string; url: string; currency?: string };
+type Webinar = EditableWebinar & { duration: string; url: string; currency?: string; status: string };
 type Review = { id: string; userName: string; rating: number; review: string; date: string };
 type DetailResponse = { mentor?: MentorDetail; reviews?: Review[]; webinars?: Webinar[] };
 
