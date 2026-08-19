@@ -1,0 +1,358 @@
+.header {
+  background: #fff;
+  border-bottom: 1px solid rgba(15, 14, 12, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: 72px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+.inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 32px;
+  width: 100%;
+}
+.menuButton {
+  padding: 8px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  margin-left: -8px;
+}
+.left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+.mobileLogo {
+  align-items: center;
+  gap: 8px;
+  margin-left: 4px;
+}
+.logoText {
+  font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f0e0c;
+  letter-spacing: -0.025em;
+}
+.locationButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 8px 12px;
+  background: #f2ebd8;
+  border: 1px solid rgba(15, 14, 12, 0.08);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s;
+}
+.locationCopy {
+  line-height: 1.1;
+}
+.locationLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b6256;
+  letter-spacing: 0.04em;
+}
+.locationValue {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f0e0c;
+  margin-top: 1px;
+}
+.locationChange {
+  color: #6b6256;
+  font-weight: 500;
+}
+.chevron {
+  display: flex;
+  transform: rotate(90deg);
+}
+.searchSlot {
+  position: relative;
+  flex: 1;
+  max-width: 600px;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.plainLink {
+  text-decoration: none;
+}
+.iconButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #f2ebd8;
+  border: 1px solid rgba(15, 14, 12, 0.08);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.chatBadge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 4px;
+  background: #e26a1f;
+  color: #fff;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #f2ebd8;
+}
+.notificationWrap {
+  position: relative;
+}
+.notificationButton {
+  transition: all 0.15s;
+}
+.notificationButtonOpen {
+  background: #ffe9d6;
+  border-color: #e26a1f;
+}
+.unreadBadge {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 8px;
+  height: 8px;
+  background: #a8321f;
+  border-radius: 50%;
+  border: 2px solid #f2ebd8;
+}
+.dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  width: 360px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid rgba(15, 14, 12, 0.08);
+  box-shadow: 0 12px 32px rgba(15, 14, 12, 0.12);
+  z-index: 200;
+  overflow: hidden;
+}
+.dropdownHeader {
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(15, 14, 12, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.dropdownTitle {
+  font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f0e0c;
+}
+.unreadCount {
+  font-size: 11.5px;
+  color: #6b6256;
+  font-weight: 500;
+  margin-top: 1px;
+}
+.textButton {
+  font-size: 12px;
+  color: #b84f12;
+  font-weight: 600;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+.notificationList {
+  max-height: 380px;
+  overflow-y: auto;
+}
+.notification {
+  display: flex;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(15, 14, 12, 0.08);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.notification:hover {
+  background: #f2ebd8;
+}
+.notificationUnread {
+  background: rgba(226, 106, 31, 0.03);
+}
+.notificationIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.notificationIconCal {
+  background: #ffe9d6;
+}
+.notificationIconChat {
+  background: #dce5f4;
+}
+.notificationIconWork,
+.notificationIconVerify {
+  background: #e1f2e6;
+}
+.notificationIconPeople {
+  background: #fae0da;
+}
+.notificationCopy {
+  flex: 1;
+  min-width: 0;
+}
+.notificationTitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f0e0c;
+  line-height: 1.35;
+}
+.notificationTitleUnread {
+  font-weight: 700;
+}
+.notificationSub {
+  font-size: 11.5px;
+  color: #6b6256;
+  font-weight: 500;
+  margin-top: 2px;
+}
+.notificationTime {
+  font-size: 11px;
+  color: #a39a8a;
+  font-weight: 500;
+  margin-top: 4px;
+}
+.notificationDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #e26a1f;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+.dropdownFooter {
+  padding: 12px 18px;
+  text-align: center;
+}
+.viewAll {
+  font-size: 13px;
+  color: #b84f12;
+  font-weight: 600;
+  display: block;
+}
+.profileButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 14px 5px 5px;
+  background: #f2ebd8;
+  border: 1px solid rgba(15, 14, 12, 0.08);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.profileCopy {
+  text-align: left;
+  line-height: 1.1;
+}
+.profileName {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f0e0c;
+}
+.profileMeta {
+  font-size: 10px;
+  color: #6b6256;
+  font-weight: 600;
+  margin-top: 1px;
+}
+.countryList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.countryHeading {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b6256;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.emptyCountries {
+  padding: 20px 0;
+  text-align: center;
+  color: #6b6256;
+  font-size: 13px;
+}
+.countryButton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 14, 12, 0.08);
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: all 0.12s;
+}
+.countryButtonSelected {
+  background: #ffe9d6;
+}
+.countryName {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f0e0c;
+}
+.countryNameSelected {
+  color: #b84f12;
+}
+.countryCode {
+  font-size: 11.5px;
+  color: #6b6256;
+  font-weight: 500;
+}
+.currentCountry {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: #b84f12;
+}
+@media (max-width: 768px) {
+  .dropdown {
+    position: fixed;
+    top: 68px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+}
