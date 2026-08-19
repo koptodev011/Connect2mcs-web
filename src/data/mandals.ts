@@ -27,6 +27,7 @@ export interface Mandal {
   home?: boolean;
   email?: string;
   phone?: string;
+  whatsapp?: string;
 }
 
 export const mandals: Mandal[] = [

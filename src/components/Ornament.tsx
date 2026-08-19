@@ -11,9 +11,10 @@ interface DividerProps {
   label?: string;
   marathi?: string;
   align?: 'center' | 'left';
+  style?: React.CSSProperties;
 }
 
-export function OrnamentDivider({ label, marathi, align = 'center' }: DividerProps) {
+export function OrnamentDivider({ label, marathi, align = 'center', style }: DividerProps) {
   const Line = (
     <svg width="120" height="14" viewBox="0 0 120 14" aria-hidden="true">
       <line x1="0" y1="7" x2="46" y2="7" stroke={C.ink4} strokeWidth="1" strokeDasharray="2 4"/>
@@ -37,6 +38,7 @@ export function OrnamentDivider({ label, marathi, align = 'center' }: DividerPro
       fontWeight: 600,
       letterSpacing: '0.14em',
       textTransform: 'uppercase',
+      ...style,
     }}>
       {Line}
       {label && <span>{label}</span>}

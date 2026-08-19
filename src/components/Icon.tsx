@@ -12,10 +12,11 @@ interface IconProps {
   name: IconName;
   size?: number;
   color?: string;
+  style?: React.CSSProperties;
   s?: number;
 }
 
-export default function Icon({ name, size = 20, color = 'currentColor', s = 1.7 }: IconProps) {
+export default function Icon({ name, size = 20, color = 'currentColor', s = 1.7, style }: IconProps) {
   const map: Record<IconName, React.ReactNode> = {
     home:     <path d="M3 10l7-6 7 6v8H3z M8 18v-5h4v5" stroke={color} strokeWidth={s} fill="none" strokeLinejoin="round"/>,
     map:      <g stroke={color} strokeWidth={s} fill="none" strokeLinejoin="round"><path d="M3 5l5-2 4 2 5-2v12l-5 2-4-2-5 2z"/><path d="M8 3v14M12 5v14"/></g>,
@@ -69,5 +70,5 @@ export default function Icon({ name, size = 20, color = 'currentColor', s = 1.7 
     link: '0 0 24 24',
   };
   
-  return <svg width={size} height={size} viewBox={viewBoxes[name] || "0 0 20 20"}>{map[name]}</svg>;
+  return <svg width={size} height={size} viewBox={viewBoxes[name] || "0 0 20 20"} style={style}>{map[name]}</svg>;
 }

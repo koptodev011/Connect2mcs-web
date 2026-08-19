@@ -404,7 +404,7 @@ export default function MandalDetailPage({
                       }
                       className={styles.inline27}
                     >
-                      <Icon name="whatsapp" size={18} color={primaryColor} />
+                      <Icon name="phone" size={18} color={primaryColor} />
                       WhatsApp {mandal.whatsapp}
                     </Btn>
                   )}
