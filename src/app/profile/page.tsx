@@ -73,6 +73,21 @@ export default function ProfilePage() {
           }}>Share profile</Btn>
           <Btn kind="dark" size="md" iconL="settings" onClick={() => setTab('edit')}>Account settings</Btn>
           <Btn kind="outline" size="md" onClick={async () => {
+            const token = localStorage.getItem('mcs_token');
+
+            if (token) {
+              try {
+                const response = await fetch('/api/v1/auth/logout', {
+                  method: 'POST',
+                  headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+                  cache: 'no-store',
+                });
+                if (!response.ok) throw new Error(`Logout API returned ${response.status}`);
+              } catch (err) {
+                console.error('Error logging out from the API:', err);
+              }
+            }
+
             if (auth.currentUser) {
               try {
                 const userRef = doc(db, 'users', auth.currentUser.uid);
@@ -84,7 +99,14 @@ export default function ProfilePage() {
             }
             localStorage.removeItem('mcs_user');
             localStorage.removeItem('mcs_token');
+            localStorage.removeItem('MCS_LoginType');
+            localStorage.removeItem('MCS_Maid_ID');
+            localStorage.removeItem('MCS_Mentor_ID');
+            localStorage.removeItem('MCS_TaxiDriver_ID');
+            localStorage.removeItem('MCS_TiffinProvider_ID');
+            localStorage.removeItem('mcs_location');
             window.dispatchEvent(new Event('mcs_auth_change'));
+            window.dispatchEvent(new Event('mcs_location_change'));
             toast.add('Logged out successfully', 'success');
             router.push('/login');
           }}>Log out</Btn>
