@@ -6,6 +6,32 @@ const API_URL =
   process.env.IDEMPIERE_API_URL || "http://15.207.222.86:8080/api/v1";
 type Reference = { id?: number | string };
 type MaidRecord = { AD_User_ID?: Reference | number | string };
+const MAID_CATEGORY_CODES = new Set(["FT", "H", "L", "New", "PT", "Used"]);
+
+function maidCategoryCode(value: unknown) {
+  const reference =
+    value && typeof value === "object"
+      ? (value as Record<string, unknown>)
+      : undefined;
+  const candidates = reference
+    ? [reference.id, reference.value, reference.Value, reference.identifier, reference.Name]
+    : [value];
+  const labels: Record<string, string> = {
+    "full time": "FT",
+    hourly: "H",
+    "live in": "L",
+    new: "New",
+    "part time": "PT",
+    used: "Used",
+  };
+  for (const candidate of candidates) {
+    const text = String(candidate ?? "").trim();
+    if (MAID_CATEGORY_CODES.has(text)) return text;
+    const mapped = labels[text.toLowerCase()];
+    if (mapped) return mapped;
+  }
+  return "";
+}
 
 function referenceId(value: Reference | number | string | undefined) {
   return Number(typeof value === "object" && value !== null ? value.id : value);
@@ -87,7 +113,7 @@ export async function PUT(
     const payload = {
       Name: String(input.Name || "").trim(),
       Phone: String(input.Phone || "").trim(),
-      MCS_Maid_Category: String(input.MCS_Maid_Category || "").trim(),
+      MCS_Maid_Category: maidCategoryCode(input.MCS_Maid_Category),
       MCS_Services: String(input.MCS_Services || "").trim(),
       MCS_ExperienceYears: Number(input.MCS_ExperienceYears),
       MCS_Rate: Number(input.MCS_Rate),
