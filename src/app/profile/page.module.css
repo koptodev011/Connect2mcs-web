@@ -446,3 +446,402 @@
 .toggleThumbOn {
   left: 18px;
 }
+.subSummary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.subSummaryIcon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.subSummaryBody {
+  flex: 1;
+  min-width: 0;
+}
+.subSummaryLabel {
+  font-size: 11px;
+  color: #6b6256;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.subSummaryTitle {
+  font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: #0f0e0c;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.subSummaryMarathi {
+  font-family: var(--font-deva), "Tiro Devanagari Marathi", serif;
+  font-size: 14px;
+  color: #b84f12;
+  font-weight: 400;
+}
+.subSummaryMeta {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #6b6256;
+  font-weight: 500;
+}
+.subPlans {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.subPlan {
+  display: flex;
+  flex-direction: column;
+}
+.subPlanHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.subPlanIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.subPlanName {
+  font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f0e0c;
+  letter-spacing: -0.02em;
+}
+.subPlanMarathi {
+  font-family: var(--font-deva), "Tiro Devanagari Marathi", serif;
+  font-size: 12px;
+  color: #6b6256;
+  margin-top: 1px;
+}
+.subPlanTagline {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #6b6256;
+  font-weight: 500;
+  line-height: 1.45;
+}
+.subPlanPrice {
+  margin-top: 12px;
+  font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f0e0c;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.subPlanPer {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #6b6256;
+  letter-spacing: 0;
+}
+.subPlanFeatures {
+  list-style: none;
+  margin: 14px 0 18px;
+  padding: 12px 0 0;
+  border-top: 1px solid rgba(15, 14, 12, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+.subPlanFeature {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #3a342b;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.subPlanTick {
+  display: inline-flex;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.subConfirm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.subConfirmIcon {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.subConfirmTitle {
+  margin-top: 14px;
+  font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: #0f0e0c;
+  letter-spacing: -0.02em;
+}
+.subConfirmText {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #3a342b;
+  font-weight: 500;
+  line-height: 1.6;
+  max-width: 320px;
+}
+.subConfirmActions {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.subConfirmActions > button {
+  flex: 1;
+}
+@media (max-width: 720px) {
+  .subPlans {
+    grid-template-columns: 1fr;
+  }
+}
+.svcGrid {
+  overflow: hidden;
+  border: 1px solid rgba(70, 54, 38, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 12px 36px rgba(62, 46, 29, 0.06);
+}
+.svcToolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 20px; padding: 4px 2px 0;
+}
+.svcSectionTitle { margin: 0; color: #27221c; font-size: 24px; line-height: 1.2; letter-spacing: -0.03em; }
+.svcSectionText { margin: 5px 0 0; color: #756d63; font-size: 14px; }
+.svcDeleteConfirm { text-align: center; padding: 8px 4px 2px; }
+.svcDeleteConfirm h3 { margin: 14px 0 8px; color: #211b15; font-size: 20px; }
+.svcDeleteConfirm p { max-width: 340px; margin: 0 auto; color: #756d63; font-size: 13.5px; line-height: 1.55; }
+.svcDeleteIcon { display: grid; width: 48px; height: 48px; margin: 0 auto; place-items: center; border-radius: 50%; background: #fff0ed; color: #b43b2f; font-size: 22px; font-weight: 800; }
+.svcDeleteActions { display: flex; justify-content: center; gap: 10px; margin-top: 22px; }
+.svcCard {
+  display: flex;
+  flex-direction: column;
+}
+.svcHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.svcIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.svcName {
+  font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f0e0c;
+  letter-spacing: -0.02em;
+}
+.svcSubtitle {
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: #6b6256;
+  font-weight: 500;
+  line-height: 1.45;
+}
+.svcMeta {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.svcMetaChip {
+  font-size: 11px;
+  font-weight: 600;
+  color: #3a342b;
+  background: rgba(15, 14, 12, 0.06);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+.svcUpdated {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #6b6256;
+  font-weight: 500;
+}
+.svcActions {
+  margin-top: auto;
+  padding-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.svcLink {
+  display: inline-flex;
+  text-decoration: none;
+}
+.svcEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.svcEmptyTitle {
+  margin-top: 12px;
+  font-family: var(--font-display), "Space Grotesk", "Poppins", sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: #0f0e0c;
+  letter-spacing: -0.02em;
+}
+.svcEmptyText {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #6b6256;
+  font-weight: 500;
+  line-height: 1.6;
+  max-width: 380px;
+}
+.svcEmptyLinks {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.svcForm {
+  display: flex;
+  flex-direction: column;
+}
+.svcFormGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+.svcField {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.svcFieldLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: #3a342b;
+  letter-spacing: 0.02em;
+}
+.svcControl {
+  width: 100%;
+  border: 1px solid rgba(15, 14, 12, 0.16);
+  border-radius: 9px;
+  background: #fff;
+  color: #0f0e0c;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 9px 11px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.svcControl:focus {
+  border-color: #e26a1f;
+  box-shadow: 0 0 0 3px rgba(226, 106, 31, 0.12);
+}
+.svcControl:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: #f7f5f2;
+}
+textarea.svcControl {
+  resize: vertical;
+}
+.svcWide {
+  grid-column: span 2;
+}
+.svcCheck {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3a342b;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.svcCheck input {
+  accent-color: #e26a1f;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+.svcAreas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border: 1px dashed rgba(15, 14, 12, 0.2);
+  border-radius: 9px;
+  padding: 10px;
+  min-height: 40px;
+}
+.svcAreasEmpty {
+  font-size: 12px;
+  color: #6b6256;
+  font-weight: 500;
+}
+.svcArea {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #3a342b;
+  background: #f7f5f2;
+  border: 1px solid rgba(15, 14, 12, 0.1);
+  border-radius: 999px;
+  padding: 5px 11px;
+  cursor: pointer;
+}
+.svcArea input {
+  accent-color: #e26a1f;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+.svcFormActions {
+  margin-top: 18px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+@media (max-width: 720px) {
+  .svcGrid {
+    grid-template-columns: 1fr;
+  }
+  .svcFormGrid {
+    grid-template-columns: 1fr;
+  }
+  .svcWide {
+    grid-column: span 1;
+  }
+}

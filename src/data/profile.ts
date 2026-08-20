@@ -10,6 +10,7 @@ export interface CurrentUser {
   cityId?: string;
   origin: string;
   type: string;
+  loginTypeId?: string;
   mandal: string;
   joined: string;
   bio: string;
