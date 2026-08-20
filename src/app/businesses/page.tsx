@@ -210,11 +210,6 @@ export default function BusinessesPage() {
       s: `across ${categories.length} categories`,
     },
     {
-      v: loading ? "..." : averageRating.toFixed(1),
-      l: "Average rating",
-      s: `from ${totalReviews.toLocaleString()} reviews`,
-    },
-    {
       v: loading ? "..." : String(countryCount),
       l: "Countries",
       s: "global Marathi businesses",

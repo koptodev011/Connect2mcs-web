@@ -1219,12 +1219,13 @@ export async function GET(
               u.EMail?.toLowerCase() === reqUser.toLowerCase(),
           );
         }
-        if (!user) {
+        if (!user && !reqUser) {
           user = rawProfile.find(isRealUser) || null;
         }
         if (user) {
           data = [
             {
+              id: user.id,
               name: user.Name,
               marathi: user.MCS_MarathiName || user.Name,
               role: user.MCS_Role || "Member",

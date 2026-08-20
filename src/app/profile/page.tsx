@@ -199,7 +199,7 @@ export default function ProfilePage() {
             <div className={styles.inline9}>
               <span className={styles.inline10}>
                 <Icon name="pin" size={13} color={C.ink3} /> {me.city} · from{" "}
-                {me.origin}
+                {me.country}
               </span>
               <span>·</span>
               <span>
@@ -372,7 +372,7 @@ function Overview({ me }: { me: CurrentUser }) {
       </div>
 
       {/* Events RSVPs */}
-      <section className={styles.inline33}>
+      {/* <section className={styles.inline33}>
         <SectionHead title="Your events" subtitle="Upcoming RSVPs" />
         <Card pad={32} className={styles.inline34}>
           <Icon name="cal" size={24} color={C.ink4} />
@@ -386,7 +386,7 @@ function Overview({ me }: { me: CurrentUser }) {
             </Btn>
           </Link>
         </Card>
-      </section>
+      </section> */}
     </>
   );
 }
