@@ -54,3 +54,7 @@ public/*
 
 # zip files
 *.zip
+
+# logs
+logs/
+*.log

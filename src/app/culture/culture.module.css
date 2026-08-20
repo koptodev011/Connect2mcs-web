@@ -1,0 +1,801 @@
+.inline1 {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.inline2 {
+  text-decoration: none;
+}
+
+.inline3 {
+  text-decoration: none;
+}
+
+.inline4 {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid rgba(15, 14, 12, 0.08);
+  padding: 0 4px;
+}
+
+.inline5 {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+}
+
+.inline6 {
+  color: #6b6256;
+}
+
+.inline7 {
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+}
+
+.inline8 {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  background: #e26a1f;
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.inline9 {
+  height: 90px;
+  overflow: hidden;
+}
+
+.inline10 {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.inline11 {
+  padding: 12px 14px;
+  text-align: center;
+}
+
+.inline12 {
+  font-family: var(--font-deva), "Tiro Devanagari Marathi", serif;
+  font-size: 22px;
+  font-weight: 400;
+  color: #b84f12;
+}
+
+.inline13 {
+  font-family:
+    var(--font-display),
+    "Space Grotesk",
+    "Poppins",
+    -apple-system,
+    sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f0e0c;
+  margin-top: 2px;
+}
+
+.inline14 {
+  font-size: 10.5px;
+  color: #6b6256;
+  font-weight: 600;
+  margin-top: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.inline15 {
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.inline16 {
+  background-color: #fff;
+  border-radius: 16px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.inline17 {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(15, 14, 12, 0.08);
+}
+
+.inline18 {
+  font-family: var(--font-deva), "Tiro Devanagari Marathi", serif;
+  font-size: 24px;
+  font-weight: 400;
+  color: #b84f12;
+}
+
+.inline19 {
+  font-family:
+    var(--font-display),
+    "Space Grotesk",
+    "Poppins",
+    -apple-system,
+    sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f0e0c;
+}
+
+.inline20 {
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: #6b6256;
+}
+
+.inline21 {
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+.inline22 {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.inline23 {
+  color: #6b6256;
+  padding: 40px;
+  text-align: center;
+}
+
+.inline24 {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 16px;
+}
+
+.inline25 {
+  overflow: hidden;
+}
+
+.inline26 {
+  background: linear-gradient(140deg, #fff8eb 0%, #ffd9a6 100%);
+  padding: 24px 24px 22px;
+  position: relative;
+  overflow: hidden;
+}
+
+.inline27 {
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  opacity: 0.18;
+}
+
+.inline28 {
+  font-size: 11px;
+  font-weight: 700;
+  color: #b84f12;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  position: relative;
+}
+
+.inline29 {
+  margin: 6px 0 4px;
+  font-family:
+    var(--font-display),
+    "Space Grotesk",
+    "Poppins",
+    -apple-system,
+    sans-serif;
+  font-size: 30px;
+  font-weight: 600;
+  color: #0f0e0c;
+  letter-spacing: -0.03em;
+  position: relative;
+}
+
+.inline30 {
+  font-family: var(--font-deva), "Tiro Devanagari Marathi", serif;
+  color: #b84f12;
+  font-weight: 400;
+  margin-right: 10px;
+}
+
+.inline31 {
+  font-size: 14px;
+  color: #3a342b;
+  font-weight: 500;
+  position: relative;
+}
+
+.inline32 {
+  padding: 8px 18px 18px;
+}
+
+.inline33 {
+  padding: 20px 0;
+  text-align: center;
+  color: #6b6256;
+  font-size: 13px;
+}
+
+.inline34 {
+  color: #6b6256;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.inline35 {
+  color: #0f0e0c;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.inline36 {
+  padding: 20px 0;
+  text-align: center;
+  color: #6b6256;
+  font-size: 13px;
+}
+
+.inline37 {
+  padding: 14px 18px;
+  border-top: 1px solid rgba(15, 14, 12, 0.08);
+  background: #fffbf1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.inline38 {
+  font-size: 11.5px;
+  color: #6b6256;
+  font-weight: 500;
+}
+
+.inline39 {
+  overflow: hidden;
+}
+
+.inline40 {
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(15, 14, 12, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.inline41 {
+  font-family:
+    var(--font-display),
+    "Space Grotesk",
+    "Poppins",
+    -apple-system,
+    sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: #0f0e0c;
+  letter-spacing: -0.02em;
+}
+
+.inline42 {
+  font-size: 12px;
+  color: #6b6256;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.inline43 {
+  display: flex;
+  gap: 6px;
+}
+
+.inline44 {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 14, 12, 0.14);
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inline45 {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 14, 12, 0.14);
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inline46 {
+  padding: 14px 14px 18px;
+}
+
+.inline47 {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.inline48 {
+  font-size: 10.5px;
+  color: #6b6256;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 6px 0;
+}
+
+.inline49 {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.inline50 {
+  font-family: var(--font-deva), "Tiro Devanagari Marathi", serif;
+  font-size: 10px;
+  color: #6b6256;
+  text-align: right;
+}
+
+.inline51 {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #a8321f;
+  align-self: flex-start;
+}
+
+.inline52 {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 11.5px;
+  color: #6b6256;
+  font-weight: 600;
+}
+
+.inline53 {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.inline54 {
+  width: 6px;
+  height: 6px;
+  background: #a8321f;
+  border-radius: 50%;
+}
+
+.inline55 {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.inline56 {
+  width: 6px;
+  height: 6px;
+  background: #e26a1f;
+  border-radius: 50%;
+}
+
+.inline57 {
+  padding: 20px;
+  color: #6b6256;
+}
+
+.inline58 {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 16px;
+}
+
+.inline59 {
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(15, 14, 12, 0.08);
+}
+
+.inline60 {
+  font-family:
+    var(--font-display),
+    "Space Grotesk",
+    "Poppins",
+    -apple-system,
+    sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f0e0c;
+  letter-spacing: -0.02em;
+}
+
+.inline61 {
+  font-size: 12px;
+  color: #6b6256;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.inline62 {
+  padding: 8px 0;
+}
+
+.inline63 {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #ffe9d6;
+  color: #a8321f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inline64 {
+  flex: 1;
+  min-width: 0px;
+}
+
+.inline65 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inline66 {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f0e0c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inline67 {
+  font-size: 11.5px;
+  color: #6b6256;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.inline68 {
+  overflow: hidden;
+}
+
+.inline69 {
+  height: 200px;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(15, 14, 12, 0.08);
+}
+
+.inline70 {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.inline71 {
+  background: linear-gradient(135deg, #fff8eb 0%, #ffe0b5 100%);
+  padding: 28px 28px 22px;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(15, 14, 12, 0.08);
+}
+
+.inline72 {
+  position: absolute;
+  bottom: -40px;
+  right: -40px;
+  opacity: 0.16;
+}
+
+.inline73 {
+  font-size: 11px;
+  font-weight: 700;
+  color: #b84f12;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  position: relative;
+}
+
+.inline74 {
+  margin: 6px 0 8px;
+  font-family:
+    var(--font-display),
+    "Space Grotesk",
+    "Poppins",
+    -apple-system,
+    sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: #0f0e0c;
+  letter-spacing: -0.03em;
+  position: relative;
+}
+
+.inline75 {
+  display: flex;
+  gap: 8px;
+  position: relative;
+}
+
+.inline76 {
+  padding: 24px 28px;
+  font-family: var(--font-deva), "Tiro Devanagari Marathi", serif;
+  font-size: 18px;
+  color: #0f0e0c;
+  line-height: 1.85;
+  font-weight: 400;
+}
+
+.inline77 {
+  color: #6b6256;
+  font-style: italic;
+}
+
+.inline78 {
+  padding: 14px 28px 22px;
+  border-top: 1px solid rgba(15, 14, 12, 0.08);
+  font-size: 12.5px;
+  color: #6b6256;
+  font-weight: 500;
+}
+
+.inline79 {
+  color: #b84f12;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.inline80 {
+  color: #b84f12;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.inline81 {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.inline82 {
+  text-decoration: none;
+}
+
+.inline83 {
+  overflow: hidden;
+}
+
+.inline84 {
+  padding: 20px 24px 22px;
+}
+
+.inline85 {
+  margin: 10px 0 8px;
+  font-family:
+    var(--font-display),
+    "Space Grotesk",
+    "Poppins",
+    -apple-system,
+    sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: #0f0e0c;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+}
+
+.inline86 {
+  font-size: 12.5px;
+  color: #6b6256;
+  font-weight: 500;
+}
+
+.inline87 {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inline88 {
+  text-decoration: none;
+}
+
+.inline89 {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.inline90 {
+  width: 80px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+.inline91 {
+  flex: 1;
+  min-width: 0px;
+}
+
+.inline92 {
+  margin: 4px 0 4px;
+  font-family:
+    var(--font-display),
+    "Space Grotesk",
+    "Poppins",
+    -apple-system,
+    sans-serif;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #0f0e0c;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+}
+
+.inline93 {
+  font-size: 11.5px;
+  color: #6b6256;
+  font-weight: 500;
+}
+
+.inline94 {
+  text-align: center;
+  margin-top: 8px;
+}
+
+.inline95 {
+  text-decoration: none;
+}
+
+.tab {
+  align-items: baseline;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #3a342b;
+  cursor: pointer;
+  display: inline-flex;
+  font-family:
+    var(--font-ui),
+    "Poppins",
+    -apple-system,
+    system-ui,
+    sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  gap: 8px;
+  letter-spacing: -0.005em;
+  margin-bottom: -1px;
+  padding: 12px 18px;
+}
+.tabActive {
+  border-bottom-color: #e26a1f;
+  color: #b84f12;
+  font-weight: 700;
+}
+.tabDev {
+  color: #6b6256;
+  font-family: var(--font-deva), "Tiro Devanagari Marathi", serif;
+  font-size: 13px;
+  font-weight: 400;
+}
+.tabActive .tabDev {
+  color: #b84f12;
+}
+.panchangRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+.panchangRowBorder {
+  border-bottom: 1px dashed rgba(15, 14, 12, 0.08);
+}
+.calendarDay {
+  aspect-ratio: 1;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 6px;
+}
+.calendarDayValid {
+  border-color: rgba(15, 14, 12, 0.08);
+  cursor: pointer;
+  opacity: 1;
+}
+.calendarDayInvalid {
+  cursor: default;
+  opacity: 0.25;
+}
+.calendarDayToday {
+  background: #f2ebd8;
+}
+.calendarDaySelected {
+  background: #ffe9d6;
+  border: 1.5px solid #e26a1f;
+}
+.calendarNumber {
+  color: #0f0e0c;
+  font-family:
+    var(--font-display),
+    "Space Grotesk",
+    "Poppins",
+    -apple-system,
+    sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+.calendarNumberEmphasis {
+  font-weight: 700;
+}
+.calendarNumberSelected {
+  color: #b84f12;
+}
+.artiRow {
+  align-items: center;
+  background: transparent;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  display: flex;
+  gap: 12px;
+  padding: 12px 18px;
+}
+.artiRowActive {
+  background: #fffbf1;
+  border-left-color: #e26a1f;
+}
+.savedButton {
+  background: #e26a1f !important;
+}
+.unsavedButton {
+  background: #fff !important;
+}

@@ -1297,7 +1297,11 @@ export async function GET(
         break;
 
       case "calendar-months": {
-        const rawMonths = await fetchModel("MCS_MarathiCalendarMonths");
+        const rawMonths = await fetchModel(
+          "MCS_MarathiCalendarMonths",
+          "IsActive eq true",
+          { top: 100 },
+        );
         // Backend stores Gregorian month names duplicated across two calendars
         // (कालनिर्णय / महालक्ष्मी); MCS_DevanagariName actually holds the calendar
         // name, not the month. Prefer a single calendar so months aren't doubled.
