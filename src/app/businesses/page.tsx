@@ -20,6 +20,7 @@ import { FilterModal } from "@/components/FormModals";
 import { Business } from "@/data/businesses";
 import { toneBg, toneColor } from "@/lib/tones";
 import { ListBusinessModal } from "@/components/FormModals";
+import ListingTypeModal from "@/components/ListingTypeModal";
 import styles from "./page.module.css";
 
 type BusinessCategoryRecord = {
@@ -41,6 +42,7 @@ export default function BusinessesPage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const toast = useGlobalToast();
   const [listBizOpen, setListBizOpen] = useState(false);
+  const [listingTypeOpen, setListingTypeOpen] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
   const [currentUserId, setCurrentUserId] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
@@ -253,12 +255,9 @@ export default function BusinessesPage() {
               kind="dark"
               size="md"
               iconL="plus"
-              onClick={() => {
-                setEditingBusiness(null);
-                setListBizOpen(true);
-              }}
+              onClick={() => setListingTypeOpen(true)}
             >
-              List your business
+              List business or service
             </Btn>
           </>
         }
@@ -398,12 +397,9 @@ export default function BusinessesPage() {
               kind="primary"
               size="md"
               iconL="plus"
-              onClick={() => {
-                setEditingBusiness(null);
-                setListBizOpen(true);
-              }}
+              onClick={() => setListingTypeOpen(true)}
             >
-              List your business
+              List business or service
             </Btn>
           </Card>
         ) : (
@@ -434,10 +430,9 @@ export default function BusinessesPage() {
                         </div>
                         <div className={styles.owner}>{b.owner}</div>
                         <div className={styles.ratingRow}>
-                        
                           {b.phone && (
                             <span className={styles.businessMeta}>
-                               {b.phone}
+                              {b.phone}
                             </span>
                           )}
                         </div>
@@ -533,6 +528,15 @@ export default function BusinessesPage() {
         )}
       </section>
 
+      <ListingTypeModal
+        isOpen={listingTypeOpen}
+        onClose={() => setListingTypeOpen(false)}
+        onBusiness={() => {
+          setEditingBusiness(null);
+          setListBizOpen(true);
+        }}
+        onCreated={() => setReloadKey((key) => key + 1)}
+      />
       <ListBusinessModal
         isOpen={listBizOpen}
         business={editingBusiness}
