@@ -17,6 +17,7 @@ interface CountryOption {
   alpha3?: string;
 }
 interface CurrentUser {
+  id?: number | string;
   name: string;
   city?: string;
   country?: string;
@@ -128,9 +129,12 @@ export default function Header() {
       let country = user.country || "";
       let countryId = user.countryId || "";
       try {
-        const response = await fetch(
-          `/api/data/profile?username=${encodeURIComponent(user.name)}`,
-        );
+        const profileQuery = user.id
+          ? `userId=${encodeURIComponent(String(user.id))}`
+          : `username=${encodeURIComponent(user.name)}`;
+        const response = await fetch(`/api/data/profile?${profileQuery}`, {
+          cache: "no-store",
+        });
         const profiles = response.ok ? await response.json() : [];
         const profile = Array.isArray(profiles) ? profiles[0] : null;
         if (profile) {
@@ -255,7 +259,7 @@ export default function Header() {
               </span>
             </button>
           </div>
-          <div className={`mob-hide ${searchStyles.container}`}>
+          {/* <div className={`mob-hide ${searchStyles.container}`}>
             <div
               className={`${searchStyles.box} ${showSearchSuggestions ? searchStyles.boxFocused : ""}`}
             >
@@ -308,7 +312,7 @@ export default function Header() {
                 ))}
               </div>
             )}
-          </div>
+          </div> */}
           <div className={styles.actions}>
             <Link
               href="/chat"

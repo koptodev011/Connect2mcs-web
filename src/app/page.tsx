@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useSyncExternalStore } from 'react';
 import { C, F } from '@/lib/tokens';
 import Icon from '@/components/Icon';
 import { Btn, Card, Tag, Avatar, ImgPh, SectionHead, Rating } from '@/components/primitives';
@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { homeEventKindMap, resources, heroStats } from '@/data/home';
 import { communityPeople } from '@/data/community';
 import { toneBg, toneColor } from '@/lib/tones';
+import RoleDashboard from '@/components/role-dashboard/RoleDashboard';
 
 import type { Mandal } from '@/data/mandals';
 import type { CalendarEvent } from '@/data/events';
@@ -456,7 +457,40 @@ function ResourceTiles() {
   );
 }
 
+type HomeKind = 'loading' | 'student' | 'entrepreneur' | 'default';
+
+function getHomeKind(): HomeKind {
+  let user: { loginType?: string; isGuest?: boolean } | null = null;
+  try {
+    const savedUser = localStorage.getItem('mcs_user');
+    user = savedUser ? JSON.parse(savedUser) : null;
+  } catch {
+    user = null;
+  }
+
+  if (!user || user.isGuest) return 'default';
+  const loginType = String(localStorage.getItem('MCS_LoginType') || user.loginType || '')
+    .trim()
+    .toUpperCase();
+  return loginType === 'S' ? 'student' : loginType === 'E' ? 'entrepreneur' : 'default';
+}
+
+function subscribeHomeKind(onStoreChange: () => void) {
+  window.addEventListener('mcs_auth_change', onStoreChange);
+  window.addEventListener('storage', onStoreChange);
+  return () => {
+    window.removeEventListener('mcs_auth_change', onStoreChange);
+    window.removeEventListener('storage', onStoreChange);
+  };
+}
+
 export default function HomePage() {
+  const homeKind = useSyncExternalStore(subscribeHomeKind, getHomeKind, () => 'loading');
+
+  if (homeKind === 'loading') return <div style={{ minHeight: 480 }} aria-label="Loading dashboard" />;
+  if (homeKind === 'student') return <RoleDashboard kind="student" />;
+  if (homeKind === 'entrepreneur') return <RoleDashboard kind="entrepreneur" />;
+
   return (
     <div className="home-stack">
       <HeroBanner/>

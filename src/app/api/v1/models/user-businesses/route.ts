@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { verifyFavoriteUser } from '@/lib/favorite-session';
 import { fetchModel } from '@/lib/idempiere';
 
@@ -7,7 +7,6 @@ type BusinessRecord = {
   id?: number | string;
   Name?: string;
   IsActive?: boolean;
-  MCS_IsBusiness?: boolean;
   AD_User_ID?: Reference | number | string;
   CreatedBy?: Reference | number | string;
 };
@@ -30,7 +29,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const records = (await fetchModel('C_BPartner', 'IsActive eq true', {
+    const records = (await fetchModel('MCS_Businesses', 'IsActive eq true', {
       top: 100,
       orderby: 'Name',
     })) as BusinessRecord[];
@@ -38,7 +37,6 @@ export async function GET(request: NextRequest) {
       .filter(
         (record) =>
           record.IsActive !== false &&
-          record.MCS_IsBusiness === true &&
           (referenceId(record.AD_User_ID) === String(userId) ||
             referenceId(record.CreatedBy) === String(userId)),
       )

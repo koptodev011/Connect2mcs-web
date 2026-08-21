@@ -34,6 +34,8 @@ export default function LearnPage() {
   const router = useRouter();
 
   useEffect(() => {
+    const requestedTab = new URLSearchParams(window.location.search).get('tab');
+
     Promise.all([
       fetch('/api/data/scholarships').then(res => res.json()),
       fetch('/api/data/internships').then(res => res.json()),
@@ -41,6 +43,7 @@ export default function LearnPage() {
       .then(([sData, iData]) => {
         setScholarshipsData(Array.isArray(sData) ? sData : []);
         setInternshipsData(Array.isArray(iData) ? iData : []);
+        if (requestedTab === 'scholarships' || requestedTab === 'internships') setTab(requestedTab);
       })
       .catch(console.error)
       .finally(() => setLoading(false));

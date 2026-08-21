@@ -1210,16 +1210,22 @@ export async function GET(
 
       case "profile":
         const rawProfile = await fetchModel("AD_User");
+        const reqUserId = searchParams.get("userId");
         const reqUser = searchParams.get("username");
         let user = null;
-        if (reqUser) {
+        if (reqUserId) {
+          user = rawProfile.find(
+            (u: any) => String(u.id) === String(reqUserId),
+          );
+        }
+        if (!user && reqUser) {
           user = rawProfile.find(
             (u: any) =>
               u.Name?.toLowerCase() === reqUser.toLowerCase() ||
               u.EMail?.toLowerCase() === reqUser.toLowerCase(),
           );
         }
-        if (!user && !reqUser) {
+        if (!user && !reqUserId && !reqUser) {
           user = rawProfile.find(isRealUser) || null;
         }
         if (user) {
